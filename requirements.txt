@@ -1,0 +1,3 @@
+# Ambiente local minimo para rodar o sistema sem Redis, WebSocket ou PostgreSQL.
+Django>=6.0,<7.0
+bcrypt>=5.0

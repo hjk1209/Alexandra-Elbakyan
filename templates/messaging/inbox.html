@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Mensagens | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="messaging-layout whatsapp-layout">
+    <aside class="surface-card conversation-sidebar whatsapp-sidebar">
+        <div class="whatsapp-sidebar-head">
+            <div>
+                <span class="eyebrow">Mensagens pessoais</span>
+                <h1>Conversas</h1>
+            </div>
+            <span class="stat-chip">{{ conversation_cards|length }} chats</span>
+        </div>
+
+        <form method="post" action="{% url 'conversation-start' %}" class="stack-form new-chat-form">
+            {% csrf_token %}
+            <label for="{{ conversation_form.recipient.id_for_label }}">Novo contato</label>
+            {{ conversation_form.recipient }}
+            <label for="{{ conversation_form.initial_message.id_for_label }}">Primeira mensagem do chat pessoal</label>
+            {{ conversation_form.initial_message }}
+            <button type="submit" class="primary-button">Abrir chat pessoal</button>
+        </form>
+
+        <div class="conversation-list whatsapp-conversation-list">
+            {% for card in conversation_cards %}
+                <a class="conversation-item whatsapp-conversation-item{% if selected_conversation and selected_conversation.pk == card.instance.pk %} active-conversation{% endif %}" href="{% url 'conversation-detail' card.instance.pk %}">
+                    <div class="chat-avatar">
+                        {% if card.peer.avatar_view_url %}
+                            <img class="avatar-image chat-avatar-image" src="{{ card.peer.avatar_view_url }}" alt="{{ card.title }}">
+                        {% else %}
+                            <div class="avatar-fallback chat-avatar-fallback">{{ card.peer_letter }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="conversation-summary">
+                        <div class="conversation-summary-top">
+                            <strong>{{ card.title }}</strong>
+                            <span>{{ card.instance.updated_at|date:"H:i" }}</span>
+                        </div>
+                        <span>{{ card.subtitle }}</span>
+                        {% if card.last_message %}
+                            <p>{{ card.last_message.body|truncatechars:46 }}</p>
+                        {% else %}
+                            <p>Sem mensagens ainda.</p>
+                        {% endif %}
+                    </div>
+                </a>
+            {% empty %}
+                <p>Nenhuma conversa ainda. Abra a primeira acima.</p>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <section class="surface-card conversation-panel whatsapp-panel">
+        {% if selected_conversation and selected_card %}
+            <div class="conversation-header whatsapp-header">
+                <div class="whatsapp-contact">
+                    <div class="chat-avatar">
+                        {% if selected_card.peer.avatar_view_url %}
+                            <img class="avatar-image chat-avatar-image" src="{{ selected_card.peer.avatar_view_url }}" alt="{{ selected_card.title }}">
+                        {% else %}
+                            <div class="avatar-fallback chat-avatar-fallback">{{ selected_card.peer_letter }}</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2>{{ selected_card.title }}</h2>
+                        <p>{{ selected_card.subtitle }}</p>
+                        <span class="privacy-chip">{{ selected_card.privacy_label }}</span>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <span class="support-copy">{{ selected_card.privacy_summary }}</span>
+                    <span class="support-copy">Atualizada em {{ selected_conversation.updated_at|date:"d/m/Y H:i" }}</span>
+                </div>
+            </div>
+
+            <div class="message-stream whatsapp-stream">
+                {% for message in selected_conversation.messages.all %}
+                    <article class="message-bubble whatsapp-bubble{% if message.author == request.user %} own-message{% else %} incoming-message{% endif %}">
+                        {% if message.author != request.user %}
+                            <strong class="message-author">{{ message.author.display_name }}</strong>
+                        {% endif %}
+                        <p>{{ message.body }}</p>
+                        <div class="message-tools whatsapp-tools">
+                            <span class="message-time">{{ message.created_at|date:"d/m H:i" }}</span>
+                            {% if message.author != request.user and not request.user.can_view_all_content %}
+                                {% if message.pk in reported_message_ids %}
+                                    <span class="support-copy">Mensagem ja reportada</span>
+                                {% else %}
+                                    <details class="message-report-box">
+                                        <summary>Reportar para moderacao</summary>
+                                        <form method="post" action="{% url 'message-report' selected_conversation.pk message.pk %}" class="message-report-form">
+                                            {% csrf_token %}
+                                            <textarea name="reason" rows="2" placeholder="Explique rapidamente o que chamou atencao"></textarea>
+                                            <button type="submit" class="ghost-button">Enviar reporte</button>
+                                        </form>
+                                    </details>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </article>
+                {% empty %}
+                    <p>Essa conversa ainda nao tem mensagens.</p>
+                {% endfor %}
+            </div>
+
+            <form method="post" action="{% url 'message-send' selected_conversation.pk %}" class="chat-compose-bar">
+                {% csrf_token %}
+                {{ message_form.body }}
+                <button type="submit" class="primary-button">Enviar</button>
+            </form>
+        {% else %}
+            <div class="empty-state whatsapp-empty">
+                <h2>Selecione uma conversa</h2>
+                <p>Abra um chat pessoal na lateral para conversar em um canal unico entre as duas pontas.</p>
+            </div>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

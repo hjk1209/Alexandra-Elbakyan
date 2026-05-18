@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Comunidade geral | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="community-shell">
+    <article class="surface-card directory-hero">
+        <span class="eyebrow">Comunidade geral</span>
+        <h1>Quadro de avisos e calendario do grupo</h1>
+        <p>Este espaco concentra os avisos da comunidade, a agenda geral do mes e os coletivos que estao puxando as principais frentes.</p>
+        <div class="chip-row">
+            <span class="visibility-pill">{{ community_notices|length }} avisos visiveis</span>
+            <span class="visibility-pill">{{ monthly_activities|length }} atividades em {{ month_label }}</span>
+        </div>
+    </article>
+
+    <section class="community-grid">
+        <article class="surface-card">
+            <span class="eyebrow">Quadro de aviso</span>
+            <h2>Informes da comunidade</h2>
+            <div class="notice-stack">
+                {% for notice in community_notices %}
+                    <article class="notice-card">
+                        <div class="directory-head">
+                            <div>
+                                {% if notice.is_pinned %}
+                                    <span class="eyebrow">Aviso fixado</span>
+                                {% endif %}
+                                <strong>{{ notice.title }}</strong>
+                                <p>
+                                    {% if notice.community %}
+                                        {{ notice.community.display_name }}
+                                    {% else %}
+                                        Comunidade geral
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <span class="support-copy">{{ notice.created_at|date:"d/m H:i" }}</span>
+                        </div>
+                        <p>{{ notice.body }}</p>
+                        <span class="support-copy">
+                            {% if notice.author %}
+                                publicado por {{ notice.author.display_name }}
+                            {% else %}
+                                publicado pela rede
+                            {% endif %}
+                        </span>
+                    </article>
+                {% empty %}
+                    <p>Nenhum aviso publicado ainda.</p>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Calendario do mes</span>
+            <h2>Atividades de {{ month_label }}</h2>
+            <div class="calendar-board">
+                <div class="calendar-weekdays">
+                    {% for label in week_day_labels %}
+                        <span>{{ label }}</span>
+                    {% endfor %}
+                </div>
+                <div class="calendar-grid">
+                    {% for week in calendar_weeks %}
+                        {% for cell in week %}
+                            <article class="calendar-cell {% if not cell.is_current_month %}calendar-outside{% endif %} {% if cell.is_today %}calendar-today{% endif %}">
+                                <strong>{{ cell.date|date:"d" }}</strong>
+                                <div class="calendar-activity-list">
+                                    {% for activity in cell.activities %}
+                                        <div class="calendar-activity">
+                                            <span>{{ activity.title }}</span>
+                                            {% if activity.start_time %}
+                                                <small>{{ activity.start_time|time:"H:i" }}</small>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <small class="support-copy">Sem atividade</small>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <section class="community-grid">
+        <article class="surface-card">
+            <span class="eyebrow">Agenda detalhada</span>
+            <h2>Atividades do grupo neste mes</h2>
+            <div class="table-stack">
+                {% for activity in monthly_activities %}
+                    <div class="report-card">
+                        <strong>{{ activity.title }}</strong>
+                        <span>{{ activity.activity_date|date:"d/m/Y" }}{% if activity.start_time %} às {{ activity.start_time|time:"H:i" }}{% endif %}</span>
+                        <span>
+                            {% if activity.community %}
+                                {{ activity.community.display_name }}
+                            {% else %}
+                                Comunidade geral
+                            {% endif %}
+                            {% if activity.location %} • {{ activity.location }}{% endif %}
+                        </span>
+                        <p>{{ activity.description|default:"Atividade sem descricao adicional." }}</p>
+                    </div>
+                {% empty %}
+                    <p>Nenhuma atividade cadastrada para este mes.</p>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Frentes em movimento</span>
+            <h2>Coletivos do mes</h2>
+            <div class="conversation-list">
+                {% for community in community_groups %}
+                    <a class="conversation-item" href="{% url 'profile' community.handle %}">
+                        <strong>{{ community.display_name }}</strong>
+                        <span>@{{ community.handle }}</span>
+                        <span>{{ community.followers_total }} seguidores</span>
+                    </a>
+                {% empty %}
+                    <p>Nenhum coletivo disponivel por enquanto.</p>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+</section>
+{% endblock %}

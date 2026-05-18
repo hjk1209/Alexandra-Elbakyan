@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Criar conta | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <article class="surface-card auth-card wide-card">
+        <span class="eyebrow">Cadastro de base</span>
+        <h1>Entrar para a Raiz Coletiva</h1>
+        <p>Crie um perfil individual ou coletivo. Perfis de moderacao, administracao e fundacao sao liberados apenas pela equipe responsavel.</p>
+        <p class="support-copy required-note">Campos obrigatorios: nome, nome de perfil, usuario de acesso, email e senha.</p>
+        <form method="post" enctype="multipart/form-data" class="stack-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-error-box">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="form-field {% if field.errors %}has-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="required-mark">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <small class="field-help">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <small class="field-error">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="primary-button">Criar conta</button>
+        </form>
+        <p class="support-copy">Depois do cadastro, entre usando seu nome de usuario.</p>
+    </article>
+</section>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Feed | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="feed-layout">
+    <aside class="sidebar-column">
+        <article class="surface-card">
+            <span class="eyebrow">Publicar</span>
+            <h2>Nova postagem</h2>
+            <form method="post" action="{% url 'post-create' %}" enctype="multipart/form-data" class="stack-form">
+                {% csrf_token %}
+                {{ post_form.as_p }}
+                <button type="submit" class="primary-button">Lancar no feed</button>
+            </form>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Pesquisa de usuarios</span>
+            <h2>Buscar pessoas</h2>
+            <form method="get" action="{% url 'people-directory' %}" class="stack-form">
+                <input type="search" name="q" value="{{ quick_query }}" placeholder="Nome, perfil, usuario ou local">
+                <button type="submit" class="secondary-button">Pesquisar</button>
+            </form>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Rede em volta</span>
+            <h2>Sugestoes de perfis</h2>
+            {% for person in suggested_users %}
+                <div class="suggestion-row">
+                    <div>
+                        <strong>{{ person.display_name }}</strong>
+                        <p>@{{ person.handle }}</p>
+                    </div>
+                    <form method="post" action="{% url 'follow-toggle' person.handle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="ghost-button">Seguir</button>
+                    </form>
+                </div>
+            {% empty %}
+                <p>Voce ja acompanha todo mundo visivel por agora.</p>
+            {% endfor %}
+        </article>
+    </aside>
+
+    <section class="feed-column">
+        <article class="surface-card story-strip-card">
+            <div class="directory-head">
+                <div>
+                    <span class="eyebrow">Stories</span>
+                    <h2>Momentos que somem com o tempo</h2>
+                    <p class="support-copy">Rascunho salvo no navegador do celular e story ativo pelo tempo que a pessoa definir.</p>
+                </div>
+                <div class="directory-actions story-top-actions">
+                    <span class="stat-chip">{{ story_total }} ativos</span>
+                    <a class="primary-button" href="{% url 'story-editor' %}">Criar story</a>
+                </div>
+            </div>
+
+            <div class="story-strip">
+                {% for story in stories %}
+                    <a class="story-card" href="{% url 'story-detail' story.pk %}">
+                        <div class="story-avatar-ring">
+                            {% if story.author.avatar_view_url %}
+                                <img class="story-avatar" src="{{ story.author.avatar_view_url }}" alt="{{ story.author.display_name }}">
+                            {% else %}
+                                <div class="story-avatar story-avatar-fallback">{{ story.author.display_name|slice:":1"|upper }}</div>
+                            {% endif %}
+                        </div>
+                        <strong>{{ story.author.display_name }}</strong>
+                        <span>@{{ story.author.handle }}</span>
+                        <span>{{ story.expires_at|timeuntil }} restantes</span>
+                    </a>
+                {% empty %}
+                    <div class="story-empty-card">
+                        <strong>Nenhum story ativo</strong>
+                        <p>Abra o editor para soltar o primeiro story com prazo, musica e lista de pessoas.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="surface-card feed-filter-card">
+            <div class="directory-head">
+                <div>
+                    <span class="eyebrow">Visualizacao do feed</span>
+                    <h2>Escolha o filtro</h2>
+                </div>
+                <span class="support-copy">O feed mostra primeiro a ultima postagem por padrao.</span>
+            </div>
+            <div class="filter-tabs">
+                {% for key, label in feed_filter_options %}
+                    <a class="filter-tab{% if feed_filter == key %} active-filter-tab{% endif %}" href="{% url 'feed' %}?filter={{ key }}">
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </div>
+        </article>
+
+        {% for post in posts %}
+            <article class="post-card surface-card">
+                <div class="post-head">
+                    <a class="author-link" href="{% url 'profile' post.author.handle %}">
+                        <strong>{{ post.author.display_name }}</strong>
+                        <span>@{{ post.author.handle }}</span>
+                    </a>
+                    <div class="post-head-meta">
+                        <span class="visibility-pill">{{ post.get_visibility_display }}</span>
+                        <span class="stat-chip">idade {{ post.get_age_rating_display }}</span>
+                        <time>{{ post.created_at|date:"d/m H:i" }}</time>
+                    </div>
+                </div>
+
+                {% if post.caption %}
+                    <p class="post-caption">{{ post.caption }}</p>
+                {% endif %}
+                {% if post.media_view_url %}
+                    <img class="post-image" src="{{ post.media_view_url }}" alt="Imagem da publicacao">
+                {% endif %}
+
+                <div class="post-meta">
+                    <span>{{ post.likes_total }} curtidas</span>
+                    <span>{{ post.comments_total }} comentarios</span>
+                    <span>{% if post.allow_sharing %}compartilhamento liberado{% else %}sem compartilhamento{% endif %}</span>
+                    {% if post.media_download_url %}
+                        <a class="ghost-button" href="{{ post.media_download_url }}">Baixar</a>
+                    {% endif %}
+                </div>
+
+                <div class="post-actions">
+                    <form method="post" action="{% url 'post-like' post.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="ghost-button">
+                            {% if post.id in liked_post_ids %}Descurtir{% else %}Curtir{% endif %}
+                        </button>
+                    </form>
+                </div>
+
+                <section class="comment-stack">
+                    {% for comment in post.comments.all|slice:":3" %}
+                        <div class="comment-row">
+                            <strong>{{ comment.author.display_name }}</strong>
+                            <span>{{ comment.body }}</span>
+                        </div>
+                    {% empty %}
+                        <p class="support-copy">Ainda sem comentarios.</p>
+                    {% endfor %}
+                </section>
+
+                <form method="post" action="{% url 'post-comment' post.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <textarea name="body" rows="2" placeholder="Comentar com respeito e objetividade"></textarea>
+                    <button type="submit" class="secondary-button">Comentar</button>
+                </form>
+            </article>
+        {% empty %}
+            <article class="surface-card">
+                <h2>Seu feed esta vazio</h2>
+                <p>Publique algo, solte um story ou siga perfis para ativar a conversa da rede.</p>
+            </article>
+        {% endfor %}
+    </section>
+
+    <aside class="sidebar-column">
+        <article class="surface-card">
+            <span class="eyebrow">Comunidades</span>
+            <h2>Coletivos em destaque</h2>
+            <div class="conversation-list">
+                {% for community in community_highlights %}
+                    <div class="conversation-item">
+                        <strong>{{ community.display_name }}</strong>
+                        <span>@{{ community.handle }}</span>
+                        <span>{{ community.followers_total }} seguidores</span>
+                    </div>
+                {% empty %}
+                    <p>Nenhuma comunidade em destaque por enquanto.</p>
+                {% endfor %}
+            </div>
+            <div class="stack-form">
+                <a class="secondary-button" href="{% url 'community-directory' %}">Abrir comunidades</a>
+                <a class="ghost-button" href="{% url 'community-hub' %}">
+                    Comunidade geral: {{ community_notice_total }} avisos e {{ current_month_activity_total }} atividades
+                </a>
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Seguranca ativa</span>
+            <h2>Camadas em funcionamento</h2>
+            <ul class="security-list">
+                <li>Bloqueio temporario contra repeticao de falhas no login.</li>
+                <li>Headers defensivos e pagina autenticada sem cache.</li>
+                <li>Limites por minuto para publicacoes, comentarios e mensagens.</li>
+                <li>Auditoria basica disponivel no centro de protecao.</li>
+            </ul>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Seu perfil</span>
+            <h2>{{ request.user.display_name }}</h2>
+            <p>@{{ request.user.handle }}</p>
+            <a class="secondary-button" href="{% url 'profile' request.user.handle %}">Abrir perfil</a>
+        </article>
+    </aside>
+</section>
+{% endblock %}

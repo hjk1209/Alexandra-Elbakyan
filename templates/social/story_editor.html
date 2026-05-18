@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Editor de story | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="story-editor-shell">
+    <article class="surface-card story-editor-preview">
+        <span class="eyebrow">Preview</span>
+        <h1>Area de edicao do story</h1>
+        <div class="story-preview-card story-preview-forest" data-story-preview-card>
+            <div class="story-preview-head">
+                <strong>{{ request.user.display_name }}</strong>
+                <span data-story-preview-duration>24h</span>
+            </div>
+            <div class="story-preview-media" data-story-preview-media>
+                <span>Sem imagem ainda</span>
+            </div>
+            <div class="story-preview-body">
+                <p data-story-preview-caption>Seu texto do story aparece aqui.</p>
+                <span data-story-preview-music>Sem musica definida</span>
+            </div>
+        </div>
+        <p class="support-copy">O rascunho textual fica salvo no navegador do celular ate publicar ou limpar.</p>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Instagram no estilo da rede</span>
+        <h2>Montar story</h2>
+        {% if form.non_field_errors %}
+            <div class="form-error-box">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" class="stack-form story-editor-form" data-story-editor>
+            {% csrf_token %}
+
+            <div class="form-field{% if form.caption.errors %} has-error{% endif %}">
+                <label for="{{ form.caption.id_for_label }}">Texto do story</label>
+                {{ form.caption }}
+                {% for error in form.caption.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field{% if form.media.errors %} has-error{% endif %}">
+                    <label for="{{ form.media.id_for_label }}">Imagem do story</label>
+                    {{ form.media }}
+                    {% for error in form.media.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="form-field{% if form.background_style.errors %} has-error{% endif %}">
+                    <label for="{{ form.background_style.id_for_label }}">Fundo</label>
+                    {{ form.background_style }}
+                    {% for error in form.background_style.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field{% if form.visibility.errors %} has-error{% endif %}">
+                    <label for="{{ form.visibility.id_for_label }}">Lista de quem pode ver</label>
+                    {{ form.visibility }}
+                    {% for error in form.visibility.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="form-field{% if form.duration_hours.errors %} has-error{% endif %}">
+                    <label for="{{ form.duration_hours.id_for_label }}">Tempo ate apagar</label>
+                    {{ form.duration_hours }}
+                    <span class="field-help">Em horas. Exemplo: 6, 12, 24, 48.</span>
+                    {% for error in form.duration_hours.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-field{% if form.allowed_viewers.errors %} has-error{% endif %}">
+                <label for="{{ form.allowed_viewers.id_for_label }}">Perfis autorizados a ver</label>
+                {{ form.allowed_viewers }}
+                <span class="field-help">Use quando o story for restrito para uma lista personalizada.</span>
+                {% for error in form.allowed_viewers.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field{% if form.reply_scope.errors %} has-error{% endif %}">
+                    <label for="{{ form.reply_scope.id_for_label }}">Lista de quem pode responder</label>
+                    {{ form.reply_scope }}
+                    {% for error in form.reply_scope.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="form-field{% if form.allowed_responders.errors %} has-error{% endif %}">
+                    <label for="{{ form.allowed_responders.id_for_label }}">Perfis autorizados a responder</label>
+                    {{ form.allowed_responders }}
+                    {% for error in form.allowed_responders.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field{% if form.music_label.errors %} has-error{% endif %}">
+                    <label for="{{ form.music_label.id_for_label }}">Musica para o story</label>
+                    {{ form.music_label }}
+                    {% for error in form.music_label.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="form-field{% if form.music_url.errors %} has-error{% endif %}">
+                    <label for="{{ form.music_url.id_for_label }}">Link da musica</label>
+                    {{ form.music_url }}
+                    {% for error in form.music_url.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="story-editor-actions">
+                <button type="submit" class="primary-button">Publicar story</button>
+                <button type="button" class="ghost-button" data-story-draft-clear>Limpar rascunho local</button>
+                <a class="secondary-button" href="{% url 'feed' %}">Voltar ao feed</a>
+            </div>
+        </form>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Seus stories ativos</span>
+        <h2>No ar agora</h2>
+        <div class="story-side-list">
+            {% for story in active_stories %}
+                <a class="story-side-item" href="{% url 'story-detail' story.pk %}">
+                    <strong>{{ story.caption|default:"Story sem titulo"|truncatechars:40 }}</strong>
+                    <span>{{ story.get_visibility_display }} • {{ story.expires_at|timeuntil }} restantes</span>
+                </a>
+            {% empty %}
+                <p>Ainda sem story ativo para mostrar.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

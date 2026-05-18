@@ -1,0 +1,85 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: raiz-db
+    environment:
+      POSTGRES_DB: ${RAIZ_DB_NAME:-raiz_db}
+      POSTGRES_USER: ${RAIZ_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${RAIZ_DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RAIZ_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: raiz-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Application
+  web:
+    build: .
+    container_name: raiz-web
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn -c gunicorn_config.py juventude_mst.wsgi:application"
+    environment:
+      RAIZ_DEBUG: "False"
+      DJANGO_SETTINGS_MODULE: juventude_mst.settings.prod
+      RAIZ_DB_ENGINE: django.db.backends.postgresql
+      RAIZ_DB_NAME: ${RAIZ_DB_NAME:-raiz_db}
+      RAIZ_DB_USER: ${RAIZ_DB_USER:-postgres}
+      RAIZ_DB_PASSWORD: ${RAIZ_DB_PASSWORD:-postgres}
+      RAIZ_DB_HOST: db
+      RAIZ_DB_PORT: 5432
+      RAIZ_CACHE_BACKEND: django.core.cache.backends.redis.RedisCache
+      RAIZ_CACHE_LOCATION: redis://redis:6379/0
+      RAIZ_EMAIL_BACKEND: ${RAIZ_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      RAIZ_EMAIL_HOST: ${RAIZ_EMAIL_HOST:-localhost}
+      RAIZ_EMAIL_PORT: ${RAIZ_EMAIL_PORT:-587}
+      RAIZ_EMAIL_USE_TLS: ${RAIZ_EMAIL_USE_TLS:-False}
+      RAIZ_EMAIL_HOST_USER: ${RAIZ_EMAIL_HOST_USER:-}
+      RAIZ_EMAIL_HOST_PASSWORD: ${RAIZ_EMAIL_HOST_PASSWORD:-}
+      RAIZ_DEFAULT_FROM_EMAIL: ${RAIZ_DEFAULT_FROM_EMAIL:-no-reply@raizcoletiva.local}
+      RAIZ_SECRET_KEY: ${RAIZ_SECRET_KEY:-dev-compose-change-me-before-production}
+      RAIZ_ALLOWED_HOSTS: ${RAIZ_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      RAIZ_CSRF_TRUSTED_ORIGINS: ${RAIZ_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      RAIZ_SECURE_SSL_REDIRECT: ${RAIZ_SECURE_SSL_REDIRECT:-False}
+      RAIZ_ENABLE_REALTIME: ${RAIZ_ENABLE_REALTIME:-False}
+      RAIZ_REDIS_URL: redis://redis:6379/1
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div class="hero-copy">
+        <span class="eyebrow">Juventude do MST</span>
+        <h1>Uma rede social popular, segura e com jeito proprio.</h1>
+        <p>
+            A Raiz Coletiva aproxima brigadas, coletivos, escolas e militantes com feed visual,
+            perfis, conversa direta e um centro de seguranca para acompanhar acessos sensiveis.
+        </p>
+        <div class="hero-actions">
+            {% if request.user.is_authenticated %}
+                <a class="primary-button" href="{% url 'feed' %}">Entrar no feed</a>
+                <a class="secondary-button" href="{% url 'security-center' %}">{% if request.user.can_moderate or request.user.is_superuser %}Abrir gestao{% else %}Minha protecao{% endif %}</a>
+            {% else %}
+                <a class="primary-button" href="{% url 'signup' %}">Abrir conta</a>
+                <a class="secondary-button" href="{% url 'login' %}">Ja tenho acesso</a>
+            {% endif %}
+        </div>
+    </div>
+    <aside class="hero-metrics">
+        <article class="metric-card">
+            <strong>{{ member_total }}</strong>
+            <span>perfis na rede</span>
+        </article>
+        <article class="metric-card">
+            <strong>{{ post_total }}</strong>
+            <span>publicacoes ativas</span>
+        </article>
+        <article class="metric-card">
+            <strong>{{ conversation_total }}</strong>
+            <span>conversas criadas</span>
+        </article>
+        <article class="metric-card">
+            <strong>{{ message_total }}</strong>
+            <span>mensagens trocadas</span>
+        </article>
+    </aside>
+</section>
+
+<section class="feature-grid">
+    <article class="feature-card">
+        <h2>Feed com cara social</h2>
+        <p>Publicacoes com imagem, legenda, comentarios e curtidas, sem perder a identidade politica e comunitaria.</p>
+    </article>
+    <article class="feature-card">
+        <h2>Conversa direta</h2>
+        <p>Mensagens privadas entre perfis para articulacao de tarefas, eventos, brigadas e producao de conteudo.</p>
+    </article>
+    <article class="feature-card">
+        <h2>Privacidade configuravel</h2>
+        <p>Cada perfil pode ficar aberto ou restrito, e as postagens podem circular para publico, comunidade ou seguidores.</p>
+    </article>
+    <article class="feature-card">
+        <h2>Seguranca endurecida</h2>
+        <p>Rate limit, trilha de auditoria, headers defensivos, sessoes mais rigidas e bloqueio temporario contra abuso.</p>
+    </article>
+</section>
+{% endblock %}

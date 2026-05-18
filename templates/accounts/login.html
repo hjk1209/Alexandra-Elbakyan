@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <article class="surface-card auth-card">
+        <span class="eyebrow">Entrada segura</span>
+        <h1>Acessar a rede</h1>
+        <p>Entre com seu nome de usuario e senha. O acesso registra auditoria, protege a sessao e aplica bloqueio temporario contra abuso.</p>
+        <form method="post" class="stack-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% if form.non_field_errors %}
+                <div class="form-error-box">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% for field in form %}
+                <div class="form-field {% if field.errors %}has-error{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="field-help">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="primary-button">Entrar</button>
+        </form>
+        <div class="support-copy login-support-grid">
+            <p>Precisa redefinir a senha? <a href="{% url 'password-request' %}">Enviar solicitacao com senha sugerida</a>.</p>
+            <p>Solicitacoes de senha aguardando aprovacao administrativa: {{ pending_password_request_total }}</p>
+        </div>
+        <p class="support-copy">Ainda nao tem perfil? <a href="{% url 'signup' %}">Criar conta agora</a>.</p>
+    </article>
+</section>
+{% endblock %}

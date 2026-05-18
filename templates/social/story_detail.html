@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Story | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="story-detail-shell">
+    <article class="surface-card story-detail-stage">
+        <div class="story-detail-top">
+            <div>
+                <span class="eyebrow">Story ativo</span>
+                <h1>{{ story.author.display_name }}</h1>
+                <p class="support-copy">@{{ story.author.handle }} - expira em {{ story.expires_at|timeuntil }}</p>
+            </div>
+            <div class="chip-row">
+                <span class="stat-chip">{{ story.get_visibility_display }}</span>
+                <span class="stat-chip">idade {{ story.get_age_rating_display }}</span>
+                <span class="stat-chip">{{ story.views_total }} viram</span>
+                <span class="stat-chip">{{ story.reactions_total }} reacoes</span>
+                <span class="stat-chip">{{ story.replies_total }} respostas</span>
+            </div>
+        </div>
+
+        <div class="story-viewer-card story-preview-{{ story.background_style }}">
+            <div class="story-preview-head">
+                <strong>{{ story.author.display_name }}</strong>
+                <span>{{ story.duration_hours }}h</span>
+            </div>
+            {% if story.media_view_url %}
+                <img class="story-detail-image" src="{{ story.media_view_url }}" alt="Imagem do story">
+            {% else %}
+                <div class="story-detail-image story-detail-empty">Story em texto</div>
+            {% endif %}
+            <div class="story-preview-body">
+                <p>{{ story.caption|default:"Story sem texto." }}</p>
+                {% if story.music_label %}
+                    <span>
+                        Musica: {{ story.music_label }}
+                        {% if story.music_url %}
+                            - <a href="{{ story.music_url }}" target="_blank" rel="noopener noreferrer">abrir link</a>
+                        {% endif %}
+                    </span>
+                {% else %}
+                    <span>Sem musica definida.</span>
+                {% endif %}
+                {% if story.media_download_url %}
+                    <a class="ghost-button" href="{{ story.media_download_url }}">Baixar story</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if not is_story_owner %}
+            <div class="story-interactions">
+                <form method="post" action="{% url 'story-react' story.pk %}" class="story-reaction-form">
+                    {% csrf_token %}
+                    <span class="support-copy">Reagir ao story</span>
+                    <div class="story-reaction-row">
+                        {% for emoji in story_reaction_options %}
+                            <button type="submit" name="emoji" value="{{ emoji }}" class="ghost-button{% if user_reaction and user_reaction.emoji == emoji %} active-filter-tab{% endif %}">
+                                {{ emoji }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </form>
+
+                {% if can_reply %}
+                    <form method="post" action="{% url 'story-reply' story.pk %}" class="stack-form">
+                        {% csrf_token %}
+                        {{ story_reply_form.body }}
+                        <button type="submit" class="secondary-button">Responder story</button>
+                    </form>
+                {% else %}
+                    <p class="support-copy">Seu perfil pode reagir, mas nao esta liberado para responder este story.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </article>
+
+    <article class="surface-card story-meta-card">
+        {% if is_story_owner %}
+            <span class="eyebrow">Controle do autor</span>
+            <h2>Quem pode ver</h2>
+            <div class="story-side-list">
+                {% if story.visibility == 'custom' %}
+                    {% for user in story.allowed_viewers.all %}
+                        <div class="story-side-item">
+                            <strong>{{ user.display_name }}</strong>
+                            <span>@{{ user.handle }}</span>
+                        </div>
+                    {% empty %}
+                        <p>Sem lista personalizada cadastrada.</p>
+                    {% endfor %}
+                {% else %}
+                    <p>Este story segue a regra geral de visibilidade: {{ story.get_visibility_display }}.</p>
+                {% endif %}
+            </div>
+
+            <h2>Quem pode responder</h2>
+            <div class="story-side-list">
+                {% if story.reply_scope == 'custom' %}
+                    {% for user in story.allowed_responders.all %}
+                        <div class="story-side-item">
+                            <strong>{{ user.display_name }}</strong>
+                            <span>@{{ user.handle }}</span>
+                        </div>
+                    {% empty %}
+                        <p>Sem lista personalizada cadastrada.</p>
+                    {% endfor %}
+                {% else %}
+                    <p>Regra atual de resposta: {{ story.get_reply_scope_display }}.</p>
+                {% endif %}
+            </div>
+
+            <h2>Quem viu</h2>
+            <div class="story-side-list">
+                {% for entry in story_views %}
+                    <div class="story-side-item">
+                        <strong>{{ entry.viewer.display_name }}</strong>
+                        <span>{{ entry.created_at|date:"d/m H:i" }}</span>
+                    </div>
+                {% empty %}
+                    <p>Ninguem abriu este story ainda.</p>
+                {% endfor %}
+            </div>
+
+            <h2>Reacoes recebidas</h2>
+            <div class="story-side-list">
+                {% for reaction in story_reactions %}
+                    <div class="story-side-item">
+                        <strong>{{ reaction.emoji }} {{ reaction.user.display_name }}</strong>
+                        <span>{{ reaction.created_at|date:"d/m H:i" }}</span>
+                    </div>
+                {% empty %}
+                    <p>Ainda sem reacoes.</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <span class="eyebrow">Respostas</span>
+        <h2>Caixa de retorno</h2>
+        <div class="story-side-list">
+            {% for reply in story_replies %}
+                <div class="story-side-item">
+                    <strong>{{ reply.author.display_name }}</strong>
+                    <span>{{ reply.body }}</span>
+                </div>
+            {% empty %}
+                <p>Ainda sem resposta registrada para mostrar aqui.</p>
+            {% endfor %}
+        </div>
+
+        <div class="story-editor-actions">
+            <a class="secondary-button" href="{% url 'feed' %}">Voltar ao feed</a>
+            {% if is_story_owner %}
+                <a class="ghost-button" href="{% url 'story-editor' %}">Abrir editor</a>
+            {% endif %}
+        </div>
+    </article>
+</section>
+{% endblock %}

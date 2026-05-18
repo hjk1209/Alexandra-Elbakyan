@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Editar perfil | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+    <article class="surface-card auth-card wide-card">
+        <span class="eyebrow">Meu perfil</span>
+        <h1>Ajustar informacoes</h1>
+        <p class="support-copy">Seu nome de usuario de acesso: <strong>{{ request.user.username }}</strong></p>
+        {% if request.user.avatar_view_url %}
+            <img class="avatar-image large-avatar" src="{{ request.user.avatar_view_url }}" alt="{{ request.user.display_name }}">
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" class="stack-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-error-box">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% for field in form %}
+                <div class="form-field {% if field.errors %}has-error{% endif %}">
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="required-mark">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="field-help">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="primary-button">Salvar ajustes</button>
+        </form>
+    </article>
+</section>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="directory-shell">
+    <article class="surface-card directory-hero">
+        <span class="eyebrow">Conexoes da rede</span>
+        <h1>{{ page_title }}</h1>
+        <p>{{ page_description }}</p>
+        <a class="secondary-button" href="{% url 'profile' profile_user.handle %}">Voltar ao perfil</a>
+    </article>
+
+    <section class="directory-grid">
+        {% for person in connections %}
+            <article class="surface-card directory-card">
+                <div class="directory-head">
+                    <div>
+                        <span class="eyebrow">{{ person.get_role_display }}</span>
+                        <h2>{{ person.display_name }}</h2>
+                        <p>@{{ person.handle }}</p>
+                    </div>
+                    <span class="stat-chip">{{ person.followers_total }} seguidores</span>
+                </div>
+                <p>{{ person.bio|default:"Perfil sem bio por enquanto." }}</p>
+                <div class="chip-row">
+                    <span class="visibility-pill">{{ person.location|default:"Local nao informado" }}</span>
+                    <span class="visibility-pill">{{ person.posts_total }} postagens</span>
+                </div>
+                <div class="directory-actions">
+                    <a class="secondary-button" href="{% url 'profile' person.handle %}">Abrir perfil</a>
+                    {% if person.pk != request.user.pk %}
+                        <form method="post" action="{% url 'follow-toggle' person.handle %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="ghost-button">
+                                {% if person.pk in following_ids %}Deixar de seguir{% else %}Seguir{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <article class="surface-card">
+                <p>Nenhum perfil encontrado nesta lista ainda.</p>
+            </article>
+        {% endfor %}
+    </section>
+</section>
+{% endblock %}

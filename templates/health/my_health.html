@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Minha saude | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="panel-grid">
+    <article class="surface-card">
+        <span class="eyebrow">Minha saude</span>
+        <h1>Acompanhamento pessoal de saude</h1>
+        <p class="support-copy">Aqui voce acompanha suas fichas, consultas registradas e proximos agendamentos da unidade de saude.</p>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Fichas registradas</span>
+        <h2>Informacoes de saude</h2>
+        <div class="table-stack">
+            {% for record in health_records %}
+                <div class="report-card">
+                    <strong>{{ record.unit.name }}</strong>
+                    <span>Atualizada em {{ record.updated_at|date:"d/m/Y H:i" }}</span>
+                    <p><strong>Tipo sanguineo:</strong> {{ record.blood_type|default:"Nao informado" }}</p>
+                    <p><strong>Alergias:</strong> {{ record.allergies|default:"Nao informado" }}</p>
+                    <p><strong>Condicoes cronicas:</strong> {{ record.chronic_conditions|default:"Nao informado" }}</p>
+                    <p><strong>Medicacoes:</strong> {{ record.medications_in_use|default:"Nao informado" }}</p>
+                    <p><strong>Contato de emergencia:</strong> {{ record.emergency_contact_name|default:"Nao informado" }} {% if record.emergency_contact_phone %}- {{ record.emergency_contact_phone }}{% endif %}</p>
+                    <p class="support-copy">{{ record.care_notes|default:"Sem observacoes gerais registradas." }}</p>
+                </div>
+            {% empty %}
+                <p>A unidade de saude ainda nao registrou uma ficha para este perfil.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Agenda</span>
+        <h2>Agendamentos</h2>
+        <div class="table-stack">
+            {% for appointment in appointments %}
+                <div class="table-row">
+                    <strong>{{ appointment.get_appointment_type_display }}</strong>
+                    <span>{{ appointment.scheduled_for|date:"d/m/Y H:i" }}</span>
+                    <span>{{ appointment.unit.name }}</span>
+                    <span>{{ appointment.get_status_display }}</span>
+                </div>
+            {% empty %}
+                <p>Nenhum agendamento encontrado para este perfil.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Consultas</span>
+        <h2>Historico registrado</h2>
+        <div class="table-stack">
+            {% for consultation in consultations %}
+                <div class="report-card">
+                    <strong>{{ consultation.consultation_date|date:"d/m/Y H:i" }} - {{ consultation.unit.name }}</strong>
+                    <span>Operador: {{ consultation.operator.display_name|default:"Equipe da unidade" }}</span>
+                    <p><strong>Sintomas:</strong> {{ consultation.symptoms|default:"Sem sintomas informados." }}</p>
+                    <p><strong>Avaliacao:</strong> {{ consultation.evaluation_notes }}</p>
+                    <p><strong>Orientacoes:</strong> {{ consultation.guidance|default:"Sem orientacoes registradas." }}</p>
+                    {% if consultation.follow_up_date %}
+                        <p class="support-copy">Retorno sugerido para {{ consultation.follow_up_date|date:"d/m/Y" }}</p>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p>A unidade ainda nao registrou consultas para este perfil.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}
+

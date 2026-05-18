@@ -1,0 +1,47 @@
+# Core Django
+Django>=6.0,<7.0
+python-decouple==3.8
+bcrypt>=5.0
+
+# Database
+psycopg2-binary>=2.9.11,<3.0
+
+# Cache & Sessions
+django-redis>=6.0,<7.0
+redis>=6.0,<7.0
+
+# WebSockets & Real-time
+channels>=4.2,<5.0
+channels-redis>=4.2,<5.0
+daphne>=4.1,<5.0
+
+# Search
+elasticsearch>=8.11,<9.0
+django-elasticsearch-dsl>=8.0,<9.0
+
+# Admin improvements
+django-admin-interface>=0.29,<1.0
+
+# Security
+django-cors-headers>=4.7,<5.0
+django-csp>=3.8,<4.0
+django-ratelimit>=4.1,<5.0
+
+# API (if needed)
+djangorestframework>=3.16,<4.0
+drf-spectacular>=0.28,<1.0
+
+# Monitoring & Logging
+sentry-sdk>=2.0,<3.0
+
+# Production server
+gunicorn>=23.0,<24.0
+whitenoise>=6.9,<7.0
+
+# Task queue (optional)
+celery>=5.5,<6.0
+django-celery-beat>=2.8,<3.0
+
+# Testing
+factory-boy>=3.3,<4.0
+faker>=37.0,<38.0

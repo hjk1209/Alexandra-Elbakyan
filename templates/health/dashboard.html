@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Setor de saude | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="panel-grid">
+    <article class="surface-card">
+        <span class="eyebrow">Setor de saude</span>
+        <h1>Painel da unidade de saude</h1>
+        <p class="support-copy">O operador acompanha fichas, consultas e agendamentos da unidade sem expor os dados no feed da plataforma.</p>
+        <div class="stat-grid">
+            <div class="metric-card">
+                <strong>{{ unit_total }}</strong>
+                <span>unidades ativas</span>
+            </div>
+            <div class="metric-card">
+                <strong>{{ open_appointment_total }}</strong>
+                <span>agendamentos em aberto</span>
+            </div>
+            <div class="metric-card">
+                <strong>{{ recent_patient_total }}</strong>
+                <span>pessoas acompanhadas</span>
+            </div>
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Unidades liberadas</span>
+        <h2>Responsabilidade do operador</h2>
+        <div class="table-stack">
+            {% for unit in managed_units %}
+                <div class="report-card">
+                    <strong>{{ unit.name }}</strong>
+                    <span>{{ unit.location|default:"Local nao informado" }}</span>
+                    <p>{{ unit.description|default:"Sem descricao adicional." }}</p>
+                    <p class="support-copy">Operador responsavel: {{ unit.lead_operator.display_name|default:"Equipe administrativa" }}</p>
+                </div>
+            {% empty %}
+                <p>Este operador ainda nao recebeu uma unidade de saude vinculada.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Busca rapida</span>
+        <h2>Pessoas acompanhadas</h2>
+        <div class="table-stack">
+            {% for patient in patient_cards %}
+                <div class="directory-card">
+                    <div class="directory-head">
+                        <div>
+                            <strong>{{ patient.display_name }}</strong>
+                            <span>@{{ patient.handle }} - {{ patient.username }}</span>
+                        </div>
+                    </div>
+                    <p class="support-copy">{{ patient.health_record_total }} fichas e {{ patient.appointment_total }} agendamentos.</p>
+                    <div class="directory-actions">
+                        <a class="secondary-button" href="{% url 'health-dashboard' %}?patient={{ patient.pk }}">Abrir prontuario</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Ficha da pessoa</span>
+        <h2>{% if selected_patient %}Atualizar acompanhamento de {{ selected_patient.display_name }}{% else %}Selecione uma pessoa para editar a ficha{% endif %}</h2>
+        <form method="post" action="{% url 'health-record-upsert' %}" class="stack-form">
+            {% csrf_token %}
+            {{ record_form.as_p }}
+            <button type="submit" class="primary-button">Salvar ficha</button>
+        </form>
+        {% if selected_patient_records %}
+            <div class="table-stack">
+                {% for record in selected_patient_records %}
+                    <div class="report-card">
+                        <strong>{{ record.unit.name }}</strong>
+                        <span>Atualizada em {{ record.updated_at|date:"d/m/Y H:i" }}</span>
+                        <p><strong>Tipo sanguineo:</strong> {{ record.blood_type|default:"Nao informado" }}</p>
+                        <p><strong>Alergias:</strong> {{ record.allergies|default:"Nao informado" }}</p>
+                        <p class="support-copy">{{ record.care_notes|default:"Sem observacoes adicionais." }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Agendamentos</span>
+        <h2>Criar novo atendimento</h2>
+        <form method="post" action="{% url 'health-appointment-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ appointment_form.as_p }}
+            <button type="submit" class="secondary-button">Registrar agendamento</button>
+        </form>
+        <div class="table-stack">
+            {% for appointment_entry in appointment_cards %}
+                <details class="management-editor">
+                    <summary>{{ appointment_entry.instance.patient.display_name }} - {{ appointment_entry.instance.get_appointment_type_display }} em {{ appointment_entry.instance.scheduled_for|date:"d/m/Y H:i" }}</summary>
+                    <form method="post" action="{% url 'health-appointment-update' appointment_entry.instance.pk %}" class="stack-form">
+                        {% csrf_token %}
+                        <p><strong>Unidade:</strong> {{ appointment_entry.instance.unit.name }}</p>
+                        <p><strong>Motivo:</strong> {{ appointment_entry.instance.reason }}</p>
+                        {{ appointment_entry.update_form.as_p }}
+                        <button type="submit" class="ghost-button">Atualizar agendamento</button>
+                    </form>
+                </details>
+            {% empty %}
+                <p>Nenhum agendamento encontrado para a selecao atual.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Consulta</span>
+        <h2>Registrar atendimento realizado</h2>
+        <form method="post" action="{% url 'health-consultation-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ consultation_form.as_p }}
+            <button type="submit" class="primary-button">Salvar consulta</button>
+        </form>
+        <div class="table-stack">
+            {% for consultation in consultation_rows %}
+                <div class="report-card">
+                    <strong>{{ consultation.patient.display_name }} - {{ consultation.consultation_date|date:"d/m/Y H:i" }}</strong>
+                    <span>{{ consultation.unit.name }}</span>
+                    <p><strong>Avaliacao:</strong> {{ consultation.evaluation_notes }}</p>
+                    <p><strong>Orientacoes:</strong> {{ consultation.guidance|default:"Sem orientacoes registradas." }}</p>
+                </div>
+            {% empty %}
+                <p>Nenhuma consulta registrada ainda para a selecao atual.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Fila geral</span>
+        <h2>Proximos agendamentos da unidade</h2>
+        <div class="table-stack">
+            {% for appointment in upcoming_appointments %}
+                <div class="table-row">
+                    <strong>{{ appointment.patient.display_name }}</strong>
+                    <span>{{ appointment.scheduled_for|date:"d/m/Y H:i" }}</span>
+                    <span>{{ appointment.unit.name }}</span>
+                    <span>{{ appointment.get_status_display }}</span>
+                </div>
+            {% empty %}
+                <p>Nenhum agendamento em aberto nas unidades vinculadas.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

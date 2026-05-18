@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Protecao | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="panel-grid">
+    <article class="surface-card">
+        <span class="eyebrow">Centro de protecao</span>
+        <h1>{% if can_manage_users %}Gestao segura da plataforma{% elif can_moderate_content %}Painel de moderacao{% else %}Protecao da sua conta{% endif %}</h1>
+        <p class="support-copy">
+            {% if can_manage_users %}
+                Este painel concentra cadastro protegido, trilha de auditoria, suspensao de contas, revisao de pedidos de senha e acesso administrativo reforcado.
+            {% elif can_moderate_content %}
+                Aqui voce acompanha alertas, denuncias, eventos sensiveis e tentativas recentes para moderar a comunidade com seguranca.
+            {% else %}
+                Aqui voce acompanha seu historico de acesso e as camadas de defesa ativas na plataforma.
+            {% endif %}
+        </p>
+        <ul class="security-list">
+            {% for item in safety_items %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    {% if can_manage_users %}
+        <article class="surface-card">
+            <span class="eyebrow">Cadastro protegido</span>
+            <h2>Adicionar usuario</h2>
+            <form method="post" enctype="multipart/form-data" class="stack-form">
+                {% csrf_token %}
+                {{ user_create_form.as_p }}
+                <button type="submit" class="primary-button">Criar usuario</button>
+            </form>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Base ativa</span>
+            <h2>Usuarios da plataforma</h2>
+            <div class="stat-grid">
+                <div class="metric-card">
+                    <strong>{{ active_user_total }}</strong>
+                    <span>acessos ativos</span>
+                </div>
+                <div class="metric-card">
+                    <strong>{{ inactive_user_total }}</strong>
+                    <span>acessos suspensos</span>
+                </div>
+            </div>
+            <div class="table-stack management-table">
+                {% for entry in managed_users %}
+                    <div class="table-row management-row">
+                        <div class="management-meta">
+                            <strong>{{ entry.instance.display_name }}</strong>
+                            <span>{{ entry.instance.username }} - @{{ entry.instance.handle }} - {{ entry.instance.get_role_display }}{% if entry.instance.is_health_operator %} - Operador de saude{% endif %}</span>
+                            <span>{{ entry.instance.email }}</span>
+                        </div>
+                        <div class="management-actions">
+                            <span class="status-pill {% if entry.instance.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                {% if entry.instance.is_active %}Ativo{% else %}Suspenso{% endif %}
+                            </span>
+                            {% if entry.can_toggle %}
+                                <form method="post" action="{% url 'security-user-toggle' entry.instance.pk %}">
+                                    {% csrf_token %}
+                                    {{ admin_reason_form.reason.label_tag }}
+                                    {{ admin_reason_form.reason }}
+                                    <button type="submit" class="{% if entry.instance.is_active %}ghost-button{% else %}secondary-button{% endif %}">
+                                        {% if entry.instance.is_active %}Remover acesso{% else %}Reativar acesso{% endif %}
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="support-copy">conta protegida</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if entry.can_edit %}
+                        <details class="management-editor">
+                            <summary>Editar dados gerenciados</summary>
+                            <form method="post" action="{% url 'security-user-edit' entry.instance.pk %}" class="stack-form">
+                                {% csrf_token %}
+                                {{ entry.edit_form.as_p }}
+                                <button type="submit" class="secondary-button">Salvar edicao</button>
+                            </form>
+                        </details>
+                    {% endif %}
+                {% empty %}
+                    <p>Nenhum usuario cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+        </article>
+    {% endif %}
+
+    {% if can_moderate_content %}
+        <article class="surface-card">
+            <span class="eyebrow">Solicitacoes de senha</span>
+            <h2>Fila de aprovacao administrativa</h2>
+            <div class="table-stack">
+                {% for request_item in password_requests %}
+                    <div class="report-card">
+                        <div class="directory-head">
+                            <div>
+                                <strong>{{ request_item.target_user.display_name }}</strong>
+                                <span>{{ request_item.target_user.username }} - {{ request_item.requested_email }}</span>
+                            </div>
+                            <span class="status-pill {% if request_item.status == 'approved' %}status-active{% elif request_item.status == 'rejected' %}status-inactive{% else %}status-warning{% endif %}">
+                                {{ request_item.get_status_display }}
+                            </span>
+                        </div>
+                        <p>{{ request_item.note|default:"Solicitacao sem observacao extra." }}</p>
+                        <span class="support-copy">Recebida em {{ request_item.created_at|date:"d/m/Y H:i" }}</span>
+                        {% if request_item.processed_by %}
+                            <span class="support-copy">Processada por {{ request_item.processed_by.display_name }} em {{ request_item.processed_at|date:"d/m/Y H:i" }}</span>
+                        {% endif %}
+                        {% if can_manage_users and request_item.status == 'pending' %}
+                            <div class="directory-actions">
+                                <form method="post" action="{% url 'security-password-request-action' request_item.pk 'aprovar' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="primary-button">Aprovar senha sugerida</button>
+                                </form>
+                                <form method="post" action="{% url 'security-password-request-action' request_item.pk 'recusar' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="ghost-button">Recusar solicitacao</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <p>Nenhuma solicitacao de senha aguardando avaliacao.</p>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Mensagens reportadas</span>
+            <h2>Fila de alerta da comunidade</h2>
+            <div class="table-stack">
+                {% for report in message_reports %}
+                    <div class="report-card">
+                        <strong>{{ report.message.author.display_name }} - @{{ report.message.author.handle }}</strong>
+                        <span>Reportado por @{{ report.reported_by.handle }} em {{ report.created_at|date:"d/m/Y H:i" }}</span>
+                        <span class="status-pill {% if report.status == 'open' %}status-inactive{% else %}status-active{% endif %}">
+                            {{ report.get_status_display }}
+                        </span>
+                        <p>{{ report.message.body }}</p>
+                        <p class="support-copy">{{ report.reason|default:"Mensagem marcada como estranha sem observacao extra." }}</p>
+                    </div>
+                {% empty %}
+                    <p>Nenhuma mensagem reportada pela comunidade ate agora.</p>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Auditoria geral</span>
+            <h2>Tentativas recentes da plataforma</h2>
+            <div class="table-stack">
+                {% for attempt in platform_attempts %}
+                    <div class="table-row">
+                        <strong>{{ attempt.user.display_name|default:attempt.username }}</strong>
+                        <span>{{ attempt.attempted_at|date:"d/m/Y H:i" }}</span>
+                        <span>{{ attempt.ip_address|default:"IP local" }}</span>
+                        <span>{% if attempt.was_successful %}sucesso{% else %}falha{% endif %}</span>
+                    </div>
+                {% empty %}
+                    <p>Nenhuma tentativa registrada ainda.</p>
+                {% endfor %}
+            </div>
+        </article>
+    {% endif %}
+
+    <article class="surface-card">
+        <span class="eyebrow">{% if can_moderate_content %}Minha conta{% else %}Acessos recentes{% endif %}</span>
+        <h2>{% if can_moderate_content %}Minhas tentativas de login{% else %}Tentativas de login{% endif %}</h2>
+        <div class="table-stack">
+            {% for attempt in recent_attempts %}
+                <div class="table-row">
+                    <strong>{{ attempt.attempted_at|date:"d/m/Y H:i" }}</strong>
+                    <span>{{ attempt.ip_address|default:"IP local" }}</span>
+                    <span>{% if attempt.was_successful %}sucesso{% else %}falha{% endif %}</span>
+                </div>
+            {% empty %}
+                <p>Nenhuma tentativa registrada ainda.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">{% if can_moderate_content %}Eventos da plataforma{% else %}Eventos{% endif %}</span>
+        <h2>{% if can_moderate_content %}Auditoria recente{% else %}Auditoria resumida{% endif %}</h2>
+        <div class="table-stack">
+            {% for event in audit_events %}
+                <div class="table-row">
+                    <strong>{{ event.get_event_type_display }}</strong>
+                    <span>{{ event.created_at|date:"d/m/Y H:i" }}</span>
+                    <span>{% if event.user %}{{ event.user.display_name }}{% else %}sem usuario{% endif %}</span>
+                    <span>{{ event.get_severity_display }}</span>
+                </div>
+            {% empty %}
+                <p>{% if can_moderate_content %}Nenhum evento sensivel registrado ainda.{% else %}Seu historico de eventos ainda esta limpo.{% endif %}</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

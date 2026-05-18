@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ directory_title }} | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="directory-shell">
+    <article class="surface-card directory-hero">
+        <span class="eyebrow">{{ directory_eyebrow }}</span>
+        <h1>{{ directory_title }}</h1>
+        <p>{{ directory_description }}</p>
+        <form method="get" class="search-strip">
+            <input type="search" name="q" value="{{ query }}" placeholder="{{ search_placeholder }}">
+            <button type="submit" class="primary-button">Pesquisar</button>
+        </form>
+    </article>
+
+    {% if directory_kind == 'communities' %}
+        <article class="surface-card directory-card">
+            <span class="eyebrow">Comunidade geral</span>
+            <h2>Quadro de avisos e calendario do mes</h2>
+            <p>Abra o espaco comum da rede para ver avisos, atividades do grupo e o calendario mensal da comunidade.</p>
+            <div class="chip-row">
+                <span class="visibility-pill">{{ community_notice_total }} avisos ativos</span>
+                <span class="visibility-pill">{{ current_month_activity_total }} atividades neste mes</span>
+            </div>
+            <div class="directory-actions">
+                <a class="primary-button" href="{% url 'community-hub' %}">Abrir comunidade geral</a>
+            </div>
+        </article>
+    {% endif %}
+
+    <section class="directory-grid">
+        {% for person in users %}
+            <article class="surface-card directory-card">
+                <div class="directory-head">
+                    <div>
+                        {% if show_role_badge %}
+                            <span class="eyebrow">{{ person.get_role_display }}</span>
+                        {% endif %}
+                        <h2>{{ person.display_name }}</h2>
+                        <p>@{{ person.handle }}</p>
+                    </div>
+                    <span class="stat-chip">{{ person.followers_total }} seguidores</span>
+                </div>
+                <p>{{ person.bio|default:"Perfil sem bio por enquanto." }}</p>
+                <div class="chip-row">
+                    <span class="visibility-pill">{{ person.location|default:"Local nao informado" }}</span>
+                    <span class="visibility-pill">{{ person.posts_total }} postagens</span>
+                </div>
+                <div class="directory-actions">
+                    <a class="secondary-button" href="{% url 'profile' person.handle %}">Abrir perfil</a>
+                    <form method="post" action="{% url 'follow-toggle' person.handle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="ghost-button">
+                            {% if person.pk in following_ids %}Deixar de seguir{% else %}Seguir{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <article class="surface-card">
+                <p>{{ empty_message }}</p>
+            </article>
+        {% endfor %}
+    </section>
+</section>
+{% endblock %}

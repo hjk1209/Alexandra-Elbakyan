@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.display_name }} | Raiz Coletiva{% endblock %}
+
+{% block content %}
+<section class="profile-shell">
+    <article class="profile-banner surface-card">
+        <div class="profile-identity">
+            {% if profile_user.avatar_view_url %}
+                <img class="avatar-image large-avatar" src="{{ profile_user.avatar_view_url }}" alt="{{ profile_user.display_name }}">
+            {% else %}
+                <div class="avatar-fallback large-avatar">{{ profile_user.display_name|slice:":1"|upper }}</div>
+            {% endif %}
+            <div>
+                <span class="eyebrow">{{ profile_user.get_role_display }}</span>
+                <h1>{{ profile_user.display_name }}</h1>
+                <p>@{{ profile_user.handle }}</p>
+                <p>{{ profile_user.bio|default:"Sem bio ainda." }}</p>
+                <p>{{ profile_user.location|default:"Local nao informado." }}</p>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <a class="stat-chip stat-link" href="{% url 'profile-connections' profile_user.handle 'seguidores' %}">
+                {{ followers_total }} seguidores
+            </a>
+            <a class="stat-chip stat-link" href="{% url 'profile-connections' profile_user.handle 'seguindo' %}">
+                {{ following_total }} acompanhando
+            </a>
+            {% if own_profile %}
+                <a class="primary-button" href="{% url 'profile-edit' %}">Editar perfil</a>
+            {% else %}
+                {% if not is_blocked %}
+                    <form method="post" action="{% url 'follow-toggle' profile_user.handle %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="primary-button">
+                            {% if following %}Deixar de seguir{% else %}Seguir{% endif %}
+                        </button>
+                    </form>
+                {% endif %}
+                <form method="post" action="{% url 'user-block-toggle' profile_user.handle %}">
+                    {% csrf_token %}
+                    <button type="submit" class="ghost-button">
+                        {% if is_blocked %}Desbloquear{% else %}Bloquear{% endif %}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Tarefas da semana</span>
+        <h2>Agenda semanal de {{ profile_user.display_name }}</h2>
+        <p class="support-copy">Semana atual: {{ week_label }}</p>
+        <div class="table-stack">
+            {% for task in weekly_tasks %}
+                <div class="report-card">
+                    <div class="directory-head">
+                        <div>
+                            <strong>{{ task.title }}</strong>
+                            <span>{{ task.due_date|date:"d/m/Y" }}</span>
+                        </div>
+                        <span class="status-pill {% if task.status == 'done' %}status-active{% elif task.status == 'in_progress' %}status-warning{% else %}status-inactive{% endif %}">
+                            {{ task.get_status_display }}
+                        </span>
+                    </div>
+                    <p>{{ task.description|default:"Sem descricao extra para esta tarefa." }}</p>
+                    <span class="support-copy">
+                        {% if task.created_by %}
+                            organizada por {{ task.created_by.display_name }}
+                        {% else %}
+                            tarefa registrada na agenda da rede
+                        {% endif %}
+                    </span>
+                </div>
+            {% empty %}
+                <p>Sem tarefas registradas para esta semana.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <section class="feed-column">
+        {% for post in posts %}
+            <article class="post-card surface-card">
+                <div class="post-head">
+                    <div>
+                        <strong>{{ post.author.display_name }}</strong>
+                        <span>@{{ post.author.handle }}</span>
+                    </div>
+                    <div class="post-head-meta">
+                        <span class="visibility-pill">{{ post.get_visibility_display }}</span>
+                        <span class="stat-chip">idade {{ post.get_age_rating_display }}</span>
+                    </div>
+                </div>
+                {% if post.caption %}<p>{{ post.caption }}</p>{% endif %}
+                {% if post.media_view_url %}
+                    <img class="post-image" src="{{ post.media_view_url }}" alt="Midia da publicacao">
+                {% endif %}
+                <div class="post-meta">
+                    <span>{{ post.likes_total }} curtidas</span>
+                    <span>{{ post.comments_total }} comentarios</span>
+                    {% if post.media_download_url %}
+                        <a class="ghost-button" href="{{ post.media_download_url }}">Baixar</a>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <article class="surface-card">
+                <p>Esse perfil ainda nao publicou nada visivel para voce.</p>
+            </article>
+        {% endfor %}
+    </section>
+</section>
+{% endblock %}
