@@ -60,7 +60,7 @@ services:
       RAIZ_EMAIL_HOST_USER: ${RAIZ_EMAIL_HOST_USER:-}
       RAIZ_EMAIL_HOST_PASSWORD: ${RAIZ_EMAIL_HOST_PASSWORD:-}
       RAIZ_DEFAULT_FROM_EMAIL: ${RAIZ_DEFAULT_FROM_EMAIL:-no-reply@raizcoletiva.local}
-      RAIZ_SECRET_KEY: ${RAIZ_SECRET_KEY:-dev-compose-change-me-before-production}
+      RAIZ_SECRET_KEY: ${RAIZ_SECRET_KEY:?RAIZ_SECRET_KEY precisa ser definida antes de subir em producao}
       RAIZ_ALLOWED_HOSTS: ${RAIZ_ALLOWED_HOSTS:-localhost,127.0.0.1}
       RAIZ_CSRF_TRUSTED_ORIGINS: ${RAIZ_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
       RAIZ_SECURE_SSL_REDIRECT: ${RAIZ_SECURE_SSL_REDIRECT:-False}

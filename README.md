@@ -193,9 +193,9 @@ Exemplo de variaveis de producao:
 
 ```text
 RAIZ_DEBUG=False
-RAIZ_SECRET_KEY=troque-por-uma-chave-forte
-RAIZ_ALLOWED_HOSTS=seudominio.com,www.seudominio.com
-RAIZ_CSRF_TRUSTED_ORIGINS=https://seudominio.com,https://www.seudominio.com
+RAIZ_SECRET_KEY=<gere-uma-chave-aleatoria-com-64-caracteres-ou-mais>
+RAIZ_ALLOWED_HOSTS=deepenff.com,www.deepenff.com
+RAIZ_CSRF_TRUSTED_ORIGINS=https://deepenff.com,https://www.deepenff.com
 RAIZ_DB_ENGINE=django.db.backends.postgresql
 RAIZ_DB_NAME=raiz_db
 RAIZ_DB_USER=postgres

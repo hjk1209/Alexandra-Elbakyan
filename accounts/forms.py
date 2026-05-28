@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.forms import UserCreationForm
 
@@ -431,6 +432,11 @@ class PasswordRequestForm(forms.Form):
             if PasswordRequest.objects.filter(target_user=target_user, status=PasswordRequest.Status.PENDING).exists():
                 raise forms.ValidationError(self.error_messages['pending_request'])
             cleaned_data['target_user'] = target_user
+            if password1:
+                try:
+                    validate_password(password1, user=target_user)
+                except forms.ValidationError as error:
+                    self.add_error('suggested_password1', error)
         return cleaned_data
 
     def save(self):

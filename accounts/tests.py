@@ -269,6 +269,28 @@ class AuthFlowTests(TestCase):
         self.assertRedirects(response, reverse('login'))
         self.assertTrue(PasswordRequest.objects.filter(target_user=user, status=PasswordRequest.Status.PENDING).exists())
 
+    def test_password_request_rejects_weak_suggested_password(self):
+        user = User.objects.create_user(
+            username='pedido.fraco',
+            display_name='Pedido Fraco',
+            handle='pedido_fraco',
+            email='pedido.fraco@example.com',
+            password=self.password,
+        )
+        response = self.client.post(
+            reverse('password-request'),
+            {
+                'username': user.username,
+                'email': user.email,
+                'suggested_password1': '123',
+                'suggested_password2': '123',
+                'note': 'Preciso liberar um novo acesso.',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('suggested_password1', response.context['form'].errors)
+        self.assertFalse(PasswordRequest.objects.filter(target_user=user).exists())
+
     def test_two_factor_login_creates_challenge(self):
         user = User.objects.create_user(
             username='doisfatores',

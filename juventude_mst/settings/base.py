@@ -36,6 +36,7 @@ def env_list(name, default=""):
 
 HAS_DAPHNE = find_spec('daphne') is not None
 HAS_CHANNELS = find_spec('channels') is not None
+HAS_WHITENOISE = find_spec('whitenoise') is not None
 
 SECRET_KEY = os.environ.get("RAIZ_SECRET_KEY", "dev-only-change-me-before-production")
 DEBUG = env_bool("RAIZ_DEBUG", False)
@@ -81,6 +82,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if HAS_WHITENOISE:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'juventude_mst.urls'
 
@@ -158,6 +162,18 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': (
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            if HAS_WHITENOISE
+            else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+        ),
+    },
+}
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'feed'

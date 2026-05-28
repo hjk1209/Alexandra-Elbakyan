@@ -25,7 +25,7 @@ RUN mkdir -p logs && \
     chmod -R 755 logs
 
 # Collect static files with the base settings used during image build.
-RUN python manage.py collectstatic --noinput --settings=juventude_mst.settings || true
+RUN python manage.py collectstatic --noinput --settings=juventude_mst.settings
 
 EXPOSE 8000
 
