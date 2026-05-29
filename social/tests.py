@@ -5,7 +5,17 @@ from django.utils import timezone
 
 from accounts.models import User
 
-from .models import CommunityNotice, Follow, GroupActivity, Post, PostLike, Story, StoryReply
+from .models import (
+    ActivityReport,
+    CommunityJoinRequest,
+    CommunityNotice,
+    Follow,
+    GroupActivity,
+    Post,
+    PostLike,
+    Story,
+    StoryReply,
+)
 
 
 class FeedTests(TestCase):
@@ -134,6 +144,116 @@ class FeedTests(TestCase):
         response = self.client.get(reverse('community-directory'))
         self.assertContains(response, 'Brigada Popular')
         self.assertNotContains(response, 'Autor')
+
+    def test_private_community_requires_approval_before_following(self):
+        self.collective.is_profile_private = True
+        self.collective.save(update_fields=['is_profile_private'])
+
+        self._force_login(self.viewer)
+        response = self.client.post(
+            reverse('follow-toggle', args=[self.collective.handle]),
+            {'next': reverse('community-directory')},
+        )
+        self.assertRedirects(response, reverse('community-directory'))
+        self.assertFalse(Follow.objects.filter(follower=self.viewer, following=self.collective).exists())
+        join_request = CommunityJoinRequest.objects.get(requester=self.viewer, community=self.collective)
+        self.assertEqual(join_request.status, CommunityJoinRequest.Status.PENDING)
+
+        response = self.client.get(reverse('community-directory'))
+        self.assertContains(response, 'Pedido enviado')
+
+        self._force_login(self.collective)
+        response = self.client.get(reverse('profile', args=[self.collective.handle]))
+        self.assertContains(response, self.viewer.display_name)
+
+        response = self.client.post(reverse('community-join-action', args=[join_request.pk, 'aprovar']))
+        self.assertRedirects(response, reverse('profile', args=[self.collective.handle]))
+        join_request.refresh_from_db()
+        self.assertEqual(join_request.status, CommunityJoinRequest.Status.APPROVED)
+        self.assertTrue(Follow.objects.filter(follower=self.viewer, following=self.collective).exists())
+
+    def test_collective_community_post_is_visible_only_to_members(self):
+        Post.objects.create(
+            author=self.collective,
+            caption='Aviso interno da comunidade',
+            visibility=Post.Visibility.COMMUNITY,
+        )
+
+        self._force_login(self.viewer)
+        response = self.client.get(reverse('feed'))
+        self.assertNotContains(response, 'Aviso interno da comunidade')
+
+        Follow.objects.create(follower=self.viewer, following=self.collective)
+        response = self.client.get(reverse('feed'))
+        self.assertContains(response, 'Aviso interno da comunidade')
+
+    def test_rapporteur_can_send_activity_report_to_community(self):
+        self.viewer.is_rapporteur = True
+        self.viewer.save(update_fields=['is_rapporteur'])
+        Follow.objects.create(follower=self.outsider, following=self.collective)
+        self._force_login(self.viewer)
+
+        response = self.client.post(
+            reverse('activity-report-dashboard'),
+            {
+                'community': self.collective.pk,
+                'title': 'Oficina da NB',
+                'activity_date': timezone.localdate().isoformat(),
+                'body': 'A atividade reuniu a juventude para planejar a comunicacao popular.',
+                'photo': SimpleUploadedFile('oficina.jpg', b'image-content', content_type='image/jpeg'),
+                'attachment': SimpleUploadedFile('relatorio.pdf', b'%PDF-1.4', content_type='application/pdf'),
+            },
+        )
+
+        self.assertRedirects(response, reverse('activity-report-dashboard'))
+        report = ActivityReport.objects.select_related('post', 'community', 'reporter').get(title='Oficina da NB')
+        self.assertEqual(report.reporter, self.viewer)
+        self.assertEqual(report.community, self.collective)
+        self.assertIsNotNone(report.post)
+        self.assertEqual(report.post.author, self.collective)
+        self.assertEqual(report.post.visibility, Post.Visibility.COMMUNITY)
+        self.assertEqual(report.post.media.name, report.photo.name)
+        self.assertIn('Relatoria: Oficina da NB', report.post.caption)
+
+        response = self.client.get(reverse('feed'))
+        self.assertContains(response, 'Relatoria: Oficina da NB')
+
+        self._force_login(self.outsider)
+        response = self.client.get(reverse('feed'))
+        self.assertContains(response, 'Relatoria: Oficina da NB')
+        self.assertContains(response, 'Baixar arquivo da relatoria')
+        response = self.client.get(report.attachment_download_url)
+        self.assertEqual(response.status_code, 200)
+
+        self._force_login(self.author)
+        response = self.client.get(reverse('feed'))
+        self.assertNotContains(response, 'Relatoria: Oficina da NB')
+        response = self.client.get(report.attachment_download_url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_regular_user_cannot_open_activity_report_dashboard(self):
+        self._force_login(self.viewer)
+        response = self.client.get(reverse('activity-report-dashboard'))
+        self.assertRedirects(response, reverse('feed'))
+
+    def test_activity_report_rejects_unsafe_attachment_extension(self):
+        self.viewer.is_rapporteur = True
+        self.viewer.save(update_fields=['is_rapporteur'])
+        self._force_login(self.viewer)
+
+        response = self.client.post(
+            reverse('activity-report-dashboard'),
+            {
+                'community': self.collective.pk,
+                'title': 'Arquivo indevido',
+                'activity_date': timezone.localdate().isoformat(),
+                'body': 'Tentativa de enviar arquivo fora dos formatos aceitos.',
+                'attachment': SimpleUploadedFile('programa.exe', b'unsafe', content_type='application/octet-stream'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ActivityReport.objects.filter(title='Arquivo indevido').exists())
 
     def test_community_hub_shows_notice_and_month_activity(self):
         CommunityNotice.objects.create(
@@ -324,4 +444,3 @@ class StoryModelTests(TestCase):
         story.expires_at = timezone.now()
         story.save()
         self.assertTrue(story.is_expired)
-

@@ -60,6 +60,8 @@ class User(AbstractUser):
     avatar_url = models.URLField(blank=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
     is_health_operator = models.BooleanField(default=False)
+    is_rapporteur = models.BooleanField(default=False)
+    is_warehouse_operator = models.BooleanField(default=False)
     is_profile_private = models.BooleanField(default=False)
     requires_moderation_review = models.BooleanField(default=False)
     onboarding_completed = models.BooleanField(default=False)
@@ -147,6 +149,18 @@ class User(AbstractUser):
             self.is_health_operator or self.can_administer or self.can_found or self.is_superuser
         )
 
+    @property
+    def can_report_activities(self):
+        return self.is_authenticated and (
+            self.is_rapporteur or self.can_administer or self.can_found or self.is_superuser
+        )
+
+    @property
+    def can_operate_warehouse(self):
+        return self.is_authenticated and (
+            self.is_warehouse_operator or self.can_administer or self.can_found or self.is_superuser
+        )
+
     def has_recent_strong_auth(self, window_minutes=15):
         recent_reference = self.last_two_factor_verified_at or self.last_login
         if not recent_reference:
@@ -173,6 +187,8 @@ class User(AbstractUser):
         if self.blocks(viewer):
             return False
         if viewer.blocks(self):
+            return True
+        if self.role == self.Role.COLLECTIVE:
             return True
         if self.is_profile_private:
             return self.follower_links.filter(follower=viewer).exists()

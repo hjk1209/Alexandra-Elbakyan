@@ -1,4 +1,4 @@
-# Contributing to Raiz Coletiva
+# Contributing to Rede Raizes Socialista
 
 Obrigado por contribuir! Este guia explica como participar do projeto.
 
@@ -208,8 +208,8 @@ coverage report
 
 ```bash
 # Clone
-git clone https://github.com/seu-username/raiz-coletiva.git
-cd raiz-coletiva
+git clone https://github.com/seu-username/rede-raizes-socialista.git
+cd rede-raizes-socialista
 
 # Venv
 python -m venv venv

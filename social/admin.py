@@ -1,6 +1,8 @@
 from django.contrib import admin
 
 from .models import (
+    ActivityReport,
+    CommunityJoinRequest,
     CommunityNotice,
     Comment,
     Follow,
@@ -36,6 +38,20 @@ class PostLikeAdmin(admin.ModelAdmin):
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('follower', 'following', 'created_at')
+
+
+@admin.register(CommunityJoinRequest)
+class CommunityJoinRequestAdmin(admin.ModelAdmin):
+    list_display = ('requester', 'community', 'status', 'created_at', 'decided_at', 'decided_by')
+    list_filter = ('status', 'created_at', 'decided_at')
+    search_fields = ('requester__display_name', 'requester__handle', 'community__display_name', 'community__handle')
+
+
+@admin.register(ActivityReport)
+class ActivityReportAdmin(admin.ModelAdmin):
+    list_display = ('title', 'community', 'reporter', 'activity_date', 'created_at')
+    list_filter = ('activity_date', 'created_at', 'community')
+    search_fields = ('title', 'body', 'community__display_name', 'community__handle', 'reporter__display_name')
 
 
 @admin.register(CommunityNotice)

@@ -6,8 +6,28 @@ from .models import ApiRefreshToken, PasswordRequest, TwoFactorChallenge, User, 
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-    list_display = ('login_id', 'username', 'display_name', 'email', 'role', 'is_health_operator', 'is_staff', 'is_active')
-    list_filter = ('role', 'is_health_operator', 'is_staff', 'is_active', 'is_profile_private', 'two_factor_enabled')
+    list_display = (
+        'login_id',
+        'username',
+        'display_name',
+        'email',
+        'role',
+        'is_health_operator',
+        'is_rapporteur',
+        'is_warehouse_operator',
+        'is_staff',
+        'is_active',
+    )
+    list_filter = (
+        'role',
+        'is_health_operator',
+        'is_rapporteur',
+        'is_warehouse_operator',
+        'is_staff',
+        'is_active',
+        'is_profile_private',
+        'two_factor_enabled',
+    )
     fieldsets = DjangoUserAdmin.fieldsets + (
         (
             'Perfil social',
@@ -24,6 +44,8 @@ class UserAdmin(DjangoUserAdmin):
                     'avatar_url',
                     'role',
                     'is_health_operator',
+                    'is_rapporteur',
+                    'is_warehouse_operator',
                     'is_profile_private',
                     'requires_moderation_review',
                     'onboarding_completed',
@@ -51,6 +73,8 @@ class UserAdmin(DjangoUserAdmin):
                     'avatar_url',
                     'role',
                     'is_health_operator',
+                    'is_rapporteur',
+                    'is_warehouse_operator',
                     'is_profile_private',
                     'background_theme',
                     'two_factor_enabled',

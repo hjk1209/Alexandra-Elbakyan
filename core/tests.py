@@ -9,7 +9,7 @@ class HomeTests(TestCase):
     def test_home_page_loads(self):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Raiz Coletiva')
+        self.assertContains(response, 'Rede Raizes Socialista')
         self.assertContains(response, 'js/app.js')
         self.assertContains(response, 'Som: ligado')
         self.assertContains(response, 'Popup web')

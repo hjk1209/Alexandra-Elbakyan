@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Almoxarifado | {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<section class="panel-grid">
+    <article class="surface-card">
+        <span class="eyebrow">Almoxarifado</span>
+        <h1>Acervo de quadros, fotos e materiais</h1>
+        <p class="support-copy">Controle interno para localizacao das obras, entradas, saidas, acompanhamentos e estoque.</p>
+        <div class="stat-grid">
+            <div class="metric-card">
+                <strong>{{ artwork_total }}</strong>
+                <span>quadros no acervo</span>
+            </div>
+            <div class="metric-card">
+                <strong>{{ today_activity_total }}</strong>
+                <span>atividades hoje</span>
+            </div>
+            <div class="metric-card">
+                <strong>{{ month_followup_total }}</strong>
+                <span>acompanhamentos no mes</span>
+            </div>
+            <div class="metric-card">
+                <strong>{{ stock_attention_total }}</strong>
+                <span>materiais em atencao</span>
+            </div>
+        </div>
+        {% if overdue_movement_total %}
+            <p class="support-copy">{{ overdue_movement_total }} retirada(s) com prazo vencido.</p>
+        {% endif %}
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Backup</span>
+        <h2>Exportar acervo</h2>
+        <p class="support-copy">A planilha baixa os dados do acervo. As fotos seguem guardadas no sistema.</p>
+        <a class="secondary-button" href="{% url 'warehouse-csv-export' %}">Baixar CSV do acervo</a>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Acervo de fotos</span>
+        <h2>Novo quadro</h2>
+        <form method="post" action="{% url 'warehouse-artwork-create' %}" enctype="multipart/form-data" class="stack-form">
+            {% csrf_token %}
+            {{ artwork_form.as_p }}
+            <button type="submit" class="primary-button">Salvar quadro</button>
+        </form>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Pesquisa do acervo</span>
+        <h2>Encontrar obra</h2>
+        <form method="get" action="{% url 'warehouse-dashboard' %}" class="stack-form">
+            <input type="search" name="q" value="{{ query }}" placeholder="Nome da obra, autor, ID ou local">
+            <button type="submit" class="secondary-button">Pesquisar</button>
+        </form>
+        <div class="table-stack">
+            {% for artwork in artworks %}
+                <div class="report-card">
+                    <div class="directory-head">
+                        <div>
+                            <strong>{{ artwork.name }}</strong>
+                            <span>{{ artwork.inventory_number }} - {{ artwork.author|default:"Autor nao informado" }}</span>
+                        </div>
+                        <span class="status-pill status-active">{{ artwork.storage_location|default:"Sem local" }}</span>
+                    </div>
+                    {% if artwork.photo_view_url %}
+                        <img class="post-image" src="{{ artwork.photo_view_url }}" alt="Foto do quadro">
+                    {% endif %}
+                    <p>{{ artwork.notes|default:"Sem observacoes gerais." }}</p>
+                    <p class="support-copy">{{ artwork.movement_total }} movimentacoes e {{ artwork.followup_total }} acompanhamentos.</p>
+                </div>
+            {% empty %}
+                <p>Nenhum quadro encontrado.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Entrada e saida</span>
+        <h2>Registrar movimentacao</h2>
+        <form method="post" action="{% url 'warehouse-movement-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ movement_form.as_p }}
+            <button type="submit" class="primary-button">Registrar quadro</button>
+        </form>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Controle de prazos</span>
+        <h2>Quadros retirados</h2>
+        <div class="table-stack">
+            {% for movement in open_movements %}
+                <div class="report-card">
+                    <div class="directory-head">
+                        <div>
+                            <strong>{{ movement.artwork.name }}</strong>
+                            <span>{{ movement.taken_by }} - {{ movement.phone_number|default:"sem telefone" }}</span>
+                        </div>
+                        <span class="status-pill {% if movement.is_overdue %}status-inactive{% else %}status-warning{% endif %}">
+                            prazo {{ movement.due_date|date:"d/m/Y" }}
+                        </span>
+                    </div>
+                    <p>{{ movement.notes|default:"Sem observacoes da retirada." }}</p>
+                    <div class="directory-actions">
+                        <form method="post" action="{% url 'warehouse-movement-return' movement.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="secondary-button">Confirmar devolucao</button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Nenhum quadro com retirada em aberto.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Calendario</span>
+        <h2>Nova atividade</h2>
+        <form method="post" action="{% url 'warehouse-activity-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ activity_form.as_p }}
+            <button type="submit" class="secondary-button">Salvar atividade</button>
+        </form>
+        <div class="table-stack">
+            {% for activity in activities %}
+                <div class="table-row">
+                    <strong>{{ activity.artwork.name }}</strong>
+                    <span>{{ activity.activity_date|date:"d/m/Y" }} {{ activity.activity_time|time:"H:i" }}</span>
+                    <span>{{ activity.get_activity_type_display }}</span>
+                    <span>{{ activity.get_status_display }}</span>
+                </div>
+            {% empty %}
+                <p>Nenhuma atividade cadastrada.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Acompanhamentos</span>
+        <h2>Novo acompanhamento</h2>
+        <form method="post" action="{% url 'warehouse-followup-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ followup_form.as_p }}
+            <button type="submit" class="primary-button">Salvar acompanhamento</button>
+        </form>
+        <div class="table-stack">
+            {% for followup in followups %}
+                <div class="report-card">
+                    <strong>{{ followup.artwork.name }} - {{ followup.followup_date|date:"d/m/Y" }}</strong>
+                    <span>{{ followup.responsible }} - {{ followup.get_status_display }}</span>
+                    <p>{{ followup.action_taken|default:followup.reason|default:"Sem descricao adicional." }}</p>
+                    <p class="support-copy">{{ followup.destination|default:"Sem encaminhamento." }}</p>
+                </div>
+            {% empty %}
+                <p>Nenhum acompanhamento registrado.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="surface-card">
+        <span class="eyebrow">Materiais e estoque</span>
+        <h2>Cadastrar item</h2>
+        <form method="post" action="{% url 'warehouse-stock-create' %}" class="stack-form">
+            {% csrf_token %}
+            {{ stock_form.as_p }}
+            <button type="submit" class="secondary-button">Salvar item</button>
+        </form>
+        <div class="table-stack">
+            {% for item in stock_items %}
+                <div class="table-row">
+                    <strong>{{ item.material }}</strong>
+                    <span>{{ item.batch }}</span>
+                    <span>{{ item.quantity }} {{ item.get_unit_display }}</span>
+                    <span class="status-pill {% if item.needs_attention or item.expires_soon %}status-warning{% else %}status-active{% endif %}">
+                        {% if item.needs_attention %}repor{% elif item.expires_soon %}validade{% else %}ok{% endif %}
+                    </span>
+                </div>
+            {% empty %}
+                <p>Nenhum item em estoque.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

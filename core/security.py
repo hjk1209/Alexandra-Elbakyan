@@ -91,14 +91,14 @@ def build_protected_media_token(kind, object_id, action='view'):
             'object_id': int(object_id),
             'action': action,
         },
-        salt='raizcoletiva.protected-media',
+        salt='rede-raizes-socialista.protected-media',
         compress=True,
     )
 
 
 def resolve_protected_media_token(token, max_age_seconds=None):
     max_age = max_age_seconds or settings.PROTECTED_MEDIA_TOKEN_TTL_SECONDS
-    return signing.loads(token, salt='raizcoletiva.protected-media', max_age=max_age)
+    return signing.loads(token, salt='rede-raizes-socialista.protected-media', max_age=max_age)
 
 
 def build_protected_media_url(kind, object_id, action='view'):

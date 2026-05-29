@@ -4,6 +4,8 @@ from collections import defaultdict
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
@@ -14,9 +16,11 @@ from core.moderation import moderation_findings
 from core.models import SecurityEvent
 from core.security import record_security_event, throttle_request
 
-from .forms import PostForm, StoryForm, StoryReplyForm
+from .forms import ActivityReportForm, PostForm, StoryForm, StoryReplyForm
 from .models import (
+    ActivityReport,
     Comment,
+    CommunityJoinRequest,
     CommunityNotice,
     Follow,
     GroupActivity,
@@ -43,6 +47,39 @@ STORY_REACTION_OPTIONS = ['🔥', '❤️', '👏', '🌱', '⚡']
 
 def redirect_back(request, fallback='feed'):
     return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or fallback)
+
+
+def can_manage_community_requests(user, community):
+    return (
+        getattr(user, 'is_authenticated', False)
+        and community.role == User.Role.COLLECTIVE
+        and (
+            user.pk == community.pk
+            or user.can_administer
+            or user.can_found
+            or user.is_superuser
+        )
+    )
+
+
+def report_communities_for(user):
+    return User.objects.filter(is_active=True, role=User.Role.COLLECTIVE).order_by('display_name', 'username')
+
+
+def build_activity_report_caption(report):
+    body = report.body.strip()
+    activity_date = report.activity_date.strftime('%d/%m/%Y')
+    attachment_note = '\n\nArquivo de apoio anexado na relatoria.' if report.attachment else ''
+    caption = (
+        f'Relatoria: {report.title}\n'
+        f'Atividade em {activity_date}\n'
+        f'Enviada por {report.reporter.display_name}\n\n'
+        f'{body}'
+        f'{attachment_note}'
+    )
+    if len(caption) <= 2200:
+        return caption
+    return f'{caption[:2197]}...'
 
 
 def build_month_calendar(reference_date, activities):
@@ -314,6 +351,12 @@ class PeopleDirectoryView(LoginRequiredMixin, TemplateView):
         context['following_ids'] = set(
             Follow.objects.filter(follower=self.request.user).values_list('following_id', flat=True)
         )
+        context['pending_following_ids'] = set(
+            CommunityJoinRequest.objects.filter(
+                requester=self.request.user,
+                status=CommunityJoinRequest.Status.PENDING,
+            ).values_list('community_id', flat=True)
+        )
         context['directory_title'] = 'Pessoas da rede'
         context['directory_eyebrow'] = 'Pesquisa de usuarios'
         context['directory_description'] = (
@@ -336,6 +379,12 @@ class CommunityDirectoryView(LoginRequiredMixin, TemplateView):
         query = self.request.GET.get('q', '').strip()
         context['following_ids'] = set(
             Follow.objects.filter(follower=self.request.user).values_list('following_id', flat=True)
+        )
+        context['pending_following_ids'] = set(
+            CommunityJoinRequest.objects.filter(
+                requester=self.request.user,
+                status=CommunityJoinRequest.Status.PENDING,
+            ).values_list('community_id', flat=True)
         )
         context['users'] = discoverable_users(
             self.request.user,
@@ -378,6 +427,82 @@ class CommunityHubView(LoginRequiredMixin, TemplateView):
         context['week_day_labels'] = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
         context['community_groups'] = discoverable_users(self.request.user, role=User.Role.COLLECTIVE)[:6]
         return context
+
+
+class ActivityReportDashboardView(LoginRequiredMixin, FormView):
+    template_name = 'social/activity_report_dashboard.html'
+    form_class = ActivityReportForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getattr(request.user, 'can_report_activities', False):
+            messages.error(request, 'A area de relatoria e reservada para usuarios autorizados.')
+            return redirect('feed')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['communities'] = report_communities_for(self.request.user)
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        communities = report_communities_for(self.request.user)
+        reports = ActivityReport.objects.select_related('reporter', 'community', 'post')
+        if not getattr(self.request.user, 'can_view_all_content', False):
+            reports = reports.filter(
+                Q(reporter=self.request.user)
+                | Q(community=self.request.user)
+                | Q(community__in=Follow.objects.filter(follower=self.request.user).values('following_id'))
+            )
+        context['available_communities'] = communities
+        context['recent_reports'] = reports[:12]
+        context['community_total'] = communities.count()
+        return context
+
+    def form_valid(self, form):
+        if self.request.FILES:
+            limited_upload, _ = throttle_request(
+                self.request,
+                'activity-report-upload',
+                settings.UPLOAD_RATE_LIMIT_PER_MINUTE,
+                60,
+            )
+            if limited_upload:
+                messages.error(self.request, 'Upload de relatoria temporariamente limitado. Aguarde um minuto.')
+                return self.form_invalid(form)
+
+        findings = moderation_findings(
+            f'{form.cleaned_data.get("title", "")}\n{form.cleaned_data.get("body", "")}'
+        )
+        if findings['should_block']:
+            record_security_event(
+                self.request,
+                SecurityEvent.EventType.CONTENT_BLOCKED,
+                severity=SecurityEvent.Severity.WARNING,
+                user=self.request.user,
+                details={'scope': 'activity_report', 'findings': findings},
+            )
+            messages.error(self.request, 'Relatoria bloqueada por conteudo suspeito ou padrao de spam.')
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            report = form.save(commit=False)
+            report.reporter = self.request.user
+            report.save()
+            post = Post.objects.create(
+                author=report.community,
+                caption=build_activity_report_caption(report),
+                media=report.photo.name if report.photo else '',
+                visibility=Post.Visibility.COMMUNITY,
+                allow_download=False,
+                allow_sharing=True,
+                age_rating=Post.AgeRating.FREE,
+            )
+            report.post = post
+            report.save(update_fields=['post'])
+
+        messages.success(self.request, f'Relatoria enviada para {report.community.display_name}.')
+        return redirect('activity-report-dashboard')
 
 
 class PostCreateView(LoginRequiredMixin, View):
@@ -513,10 +638,44 @@ class FollowToggleView(LoginRequiredMixin, View):
             messages.error(request, 'Esse perfil esta indisponivel para seguir por regra de privacidade e bloqueio.')
             return redirect_back(request)
 
-        relation, created = Follow.objects.get_or_create(follower=request.user, following=target)
-        if not created:
+        relation = Follow.objects.filter(follower=request.user, following=target).first()
+        if relation:
             relation.delete()
             messages.info(request, f'Voce deixou de seguir {target.display_name}.')
+        elif target.role == User.Role.COLLECTIVE and target.is_profile_private:
+            join_request, created = CommunityJoinRequest.objects.get_or_create(
+                requester=request.user,
+                community=target,
+                status=CommunityJoinRequest.Status.PENDING,
+            )
+            if created:
+                messages.success(request, f'Pedido enviado para entrar em {target.display_name}.')
+            else:
+                messages.info(request, f'Seu pedido para {target.display_name} ainda esta aguardando aprovacao.')
         else:
+            Follow.objects.create(follower=request.user, following=target)
             messages.success(request, f'Agora voce acompanha {target.display_name}.')
         return redirect_back(request)
+
+
+class CommunityJoinRequestActionView(LoginRequiredMixin, View):
+    def post(self, request, pk, action, *args, **kwargs):
+        join_request = get_object_or_404(
+            CommunityJoinRequest.objects.select_related('requester', 'community'),
+            pk=pk,
+            status=CommunityJoinRequest.Status.PENDING,
+        )
+        community = join_request.community
+        if not can_manage_community_requests(request.user, community):
+            messages.error(request, 'Apenas a comunidade ou a gestao autorizada pode decidir esse pedido.')
+            return redirect('profile', handle=community.handle)
+
+        if action == 'aprovar':
+            join_request.approve(actor=request.user)
+            messages.success(request, f'{join_request.requester.display_name} entrou na comunidade.')
+        elif action == 'recusar':
+            join_request.reject(actor=request.user)
+            messages.info(request, f'Pedido de {join_request.requester.display_name} recusado.')
+        else:
+            messages.error(request, 'Acao de comunidade nao reconhecida.')
+        return redirect('profile', handle=community.handle)

@@ -4,23 +4,29 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Raiz Coletiva{% endblock %}</title>
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     <script src="{% static 'js/app.js' %}" defer></script>
 </head>
 <body class="theme-{% if request.user.is_authenticated %}{{ request.user.background_theme|default:'terra' }}{% else %}terra{% endif %}">
     <header class="site-header">
         <div class="brand-block">
-            <a class="brand-mark" href="{% url 'home' %}">Raiz Coletiva</a>
-            <p class="brand-subtitle">Rede social da juventude do MST com feed, conversa direta e seguranca reforcada.</p>
+            <a class="brand-mark" href="{% url 'home' %}">{{ SITE_NAME }}</a>
+            <p class="brand-subtitle">{{ SITE_DESCRIPTION }}</p>
         </div>
         <nav class="site-nav">
             {% if request.user.is_authenticated %}
                 <a href="{% url 'feed' %}">Feed</a>
                 <a href="{% url 'people-directory' %}">Pessoas</a>
                 <a href="{% url 'community-directory' %}">Comunidades</a>
+                {% if request.user.can_report_activities %}
+                    <a href="{% url 'activity-report-dashboard' %}">Relatoria</a>
+                {% endif %}
                 <a href="{% url 'inbox' %}">Mensagens</a>
                 <a href="{% url 'health-home' %}">Saude</a>
+                {% if request.user.can_operate_warehouse %}
+                    <a href="{% url 'warehouse-dashboard' %}">Almoxarifado</a>
+                {% endif %}
                 <a href="{% url 'profile' request.user.handle %}">Meu perfil</a>
                 <a href="{% url 'security-center' %}">{% if request.user.can_moderate or request.user.is_superuser %}Gestao{% else %}Protecao{% endif %}</a>
                 <button type="button" class="ghost-button popup-toggle" data-popup-toggle aria-pressed="false">
@@ -65,7 +71,7 @@
     </main>
 
     <footer class="site-footer">
-        <p>Raiz Coletiva combina comunidade, articulacao politica e uma base de seguranca pensada para ambiente real de organizacao.</p>
+        <p>{{ SITE_NAME }} combina comunidade, articulacao politica e uma base de seguranca pensada para ambiente real de organizacao.</p>
     </footer>
 </body>
 </html>

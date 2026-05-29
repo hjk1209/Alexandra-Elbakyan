@@ -6,21 +6,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Python dependencies
 COPY requirements.txt requirements-prod.txt ./
 RUN pip install --upgrade pip && \
     pip install -r requirements-prod.txt
 
-# Copy application
 COPY . .
 
-# Create logs directory
 RUN mkdir -p logs && \
     chmod -R 755 logs
 

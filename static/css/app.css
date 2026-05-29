@@ -119,6 +119,11 @@ button {
     cursor: pointer;
 }
 
+button:disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+}
+
 .site-header,
 .site-footer,
 .page-shell,

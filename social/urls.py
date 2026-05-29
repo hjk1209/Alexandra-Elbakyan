@@ -1,9 +1,11 @@
 from django.urls import path
 
 from .views import (
+    ActivityReportDashboardView,
     CommentCreateView,
     CommunityDirectoryView,
     CommunityHubView,
+    CommunityJoinRequestActionView,
     FeedView,
     FollowToggleView,
     PeopleDirectoryView,
@@ -24,6 +26,8 @@ urlpatterns = [
     path('pessoas/', PeopleDirectoryView.as_view(), name='people-directory'),
     path('comunidades/', CommunityDirectoryView.as_view(), name='community-directory'),
     path('comunidades/geral/', CommunityHubView.as_view(), name='community-hub'),
+    path('comunidades/solicitacoes/<int:pk>/<slug:action>/', CommunityJoinRequestActionView.as_view(), name='community-join-action'),
+    path('relatoria/', ActivityReportDashboardView.as_view(), name='activity-report-dashboard'),
     path('publicar/', PostCreateView.as_view(), name='post-create'),
     path('curtir/<int:pk>/', ToggleLikeView.as_view(), name='post-like'),
     path('comentar/<int:pk>/', CommentCreateView.as_view(), name='post-comment'),

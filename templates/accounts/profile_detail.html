@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ profile_user.display_name }} | Raiz Coletiva{% endblock %}
+{% block title %}{{ profile_user.display_name }} | {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="profile-shell">
@@ -17,6 +17,14 @@
                 <p>@{{ profile_user.handle }}</p>
                 <p>{{ profile_user.bio|default:"Sem bio ainda." }}</p>
                 <p>{{ profile_user.location|default:"Local nao informado." }}</p>
+                {% if is_collective_profile %}
+                    <div class="chip-row">
+                        <span class="visibility-pill">Comunidade</span>
+                        <span class="visibility-pill">
+                            {% if profile_user.is_profile_private %}Privada{% else %}Aberta{% endif %}
+                        </span>
+                    </div>
+                {% endif %}
             </div>
         </div>
         <div class="profile-actions">
@@ -30,13 +38,23 @@
                 <a class="primary-button" href="{% url 'profile-edit' %}">Editar perfil</a>
             {% else %}
                 {% if not is_blocked %}
-                    <form method="post" action="{% url 'follow-toggle' profile_user.handle %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit" class="primary-button">
-                            {% if following %}Deixar de seguir{% else %}Seguir{% endif %}
-                        </button>
-                    </form>
+                    {% if membership_pending %}
+                        <button type="button" class="ghost-button" disabled>Pedido enviado</button>
+                    {% else %}
+                        <form method="post" action="{% url 'follow-toggle' profile_user.handle %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="primary-button">
+                                {% if following %}
+                                    Deixar de seguir
+                                {% elif is_collective_profile and profile_user.is_profile_private %}
+                                    Solicitar entrada
+                                {% else %}
+                                    Seguir
+                                {% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
                 {% endif %}
                 <form method="post" action="{% url 'user-block-toggle' profile_user.handle %}">
                     {% csrf_token %}
@@ -47,6 +65,47 @@
             {% endif %}
         </div>
     </article>
+
+    {% if is_collective_profile %}
+        <article class="surface-card">
+            <span class="eyebrow">Area da comunidade</span>
+            <h2>{{ profile_user.display_name }}</h2>
+            {% if profile_user.is_profile_private %}
+                <p class="support-copy">Comunidade privada: novas pessoas entram depois da aprovacao do perfil.</p>
+            {% else %}
+                <p class="support-copy">Comunidade aberta: novas pessoas entram ao seguir o perfil.</p>
+            {% endif %}
+            {% if can_manage_community_requests %}
+                <div class="table-stack">
+                    {% for join_request in community_join_requests %}
+                        <div class="report-card">
+                            <div class="directory-head">
+                                <div>
+                                    <strong>{{ join_request.requester.display_name }}</strong>
+                                    <span>@{{ join_request.requester.handle }}</span>
+                                </div>
+                                <span class="status-pill status-warning">Aguardando</span>
+                            </div>
+                            <div class="directory-actions">
+                                <form method="post" action="{% url 'community-join-action' join_request.pk 'aprovar' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="primary-button">Aceitar</button>
+                                </form>
+                                <form method="post" action="{% url 'community-join-action' join_request.pk 'recusar' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="ghost-button">Recusar</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>Nenhum pedido de entrada pendente.</p>
+                    {% endfor %}
+                </div>
+            {% elif profile_user.is_profile_private and not following %}
+                <p class="support-copy">As publicacoes da comunidade ficam visiveis depois que seu pedido for aceito.</p>
+            {% endif %}
+        </article>
+    {% endif %}
 
     <article class="surface-card">
         <span class="eyebrow">Tarefas da semana</span>
@@ -96,6 +155,17 @@
                 {% if post.media_view_url %}
                     <img class="post-image" src="{{ post.media_view_url }}" alt="Midia da publicacao">
                 {% endif %}
+                {% with report=post.activity_report %}
+                    {% if report %}
+                        <div class="report-card">
+                            <strong>Relatoria de atividade</strong>
+                            <span>{{ report.activity_date|date:"d/m/Y" }} - enviada por {{ report.reporter.display_name }}</span>
+                            {% if report.attachment_download_url %}
+                                <a class="ghost-button" href="{{ report.attachment_download_url }}">Baixar arquivo da relatoria</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
                 <div class="post-meta">
                     <span>{{ post.likes_total }} curtidas</span>
                     <span>{{ post.comments_total }} comentarios</span>

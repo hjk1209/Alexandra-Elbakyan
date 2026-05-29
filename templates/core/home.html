@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Raiz Coletiva{% endblock %}
+{% block title %}{{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="hero-panel">
@@ -8,8 +8,8 @@
         <span class="eyebrow">Juventude do MST</span>
         <h1>Uma rede social popular, segura e com jeito proprio.</h1>
         <p>
-            A Raiz Coletiva aproxima brigadas, coletivos, escolas e militantes com feed visual,
-            perfis, conversa direta e um centro de seguranca para acompanhar acessos sensiveis.
+            A {{ SITE_NAME }} aproxima brigadas, coletivos, escolas e militantes com feed visual,
+            comunidades, relatoria, almoxarifado e um centro de seguranca para acompanhar acessos sensiveis.
         </p>
         <div class="hero-actions">
             {% if request.user.is_authenticated %}

@@ -22,16 +22,17 @@ def mask_contact(value):
 
 def deliver_two_factor_code(user, challenge, raw_code):
     requested_destination = challenge.sent_to or user.phone_number or user.email or challenge.channel
+    site_name = getattr(settings, 'SITE_NAME', 'Rede Raizes Socialista')
     message = (
-        f'Codigo de verificacao da Raiz Coletiva: {raw_code}\n'
+        f'Codigo de verificacao da {site_name}: {raw_code}\n'
         f'Canal escolhido: {challenge.get_channel_display()}\n'
         'Se voce nao tentou entrar, ignore esta mensagem.'
     )
     if user.email:
         send_mail(
-            'Codigo de verificacao da Raiz Coletiva',
+            f'Codigo de verificacao da {site_name}',
             message,
-            getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@raizcoletiva.local'),
+            getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rede-raizes-socialista.local'),
             [user.email],
             fail_silently=True,
         )

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Protecao | Raiz Coletiva{% endblock %}
+{% block title %}Protecao | {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="panel-grid">
@@ -52,7 +52,7 @@
                     <div class="table-row management-row">
                         <div class="management-meta">
                             <strong>{{ entry.instance.display_name }}</strong>
-                            <span>{{ entry.instance.username }} - @{{ entry.instance.handle }} - {{ entry.instance.get_role_display }}{% if entry.instance.is_health_operator %} - Operador de saude{% endif %}</span>
+                            <span>{{ entry.instance.username }} - @{{ entry.instance.handle }} - {{ entry.instance.get_role_display }}{% if entry.instance.is_health_operator %} - Operador de saude{% endif %}{% if entry.instance.is_rapporteur %} - Relatoria{% endif %}{% if entry.instance.is_warehouse_operator %} - Almoxarifado{% endif %}</span>
                             <span>{{ entry.instance.email }}</span>
                         </div>
                         <div class="management-actions">

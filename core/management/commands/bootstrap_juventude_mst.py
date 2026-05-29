@@ -7,6 +7,7 @@ from accounts.models import User
 from health.models import HealthAppointment, HealthConsultation, HealthRecord, HealthUnit
 from messaging.models import Conversation, Message
 from social.models import CommunityNotice, Follow, GroupActivity, Post, WeeklyTask
+from warehouse.models import Artwork, ArtworkMovement, WarehouseActivity, WarehouseFollowUp, WarehouseStockItem
 
 
 DEMO_PASSWORD = 'MstJuventude!2026'
@@ -21,7 +22,7 @@ class Command(BaseCommand):
                 'username': 'coord.juventude',
                 'handle': 'coord_juventude',
                 'display_name': 'Coordenacao da Juventude',
-                'email': 'coord@raizcoletiva.local',
+                'email': 'coord@rede-raizes-socialista.local',
                 'birth_date': '1988-05-10',
                 'role': User.Role.FOUNDER,
                 'bio': 'Articulacao de frentes, brigadas e jornadas de formacao.',
@@ -34,7 +35,7 @@ class Command(BaseCommand):
                 'username': 'brigada.campo',
                 'handle': 'brigada_campo',
                 'display_name': 'Brigada Campo Vivo',
-                'email': 'campo@raizcoletiva.local',
+                'email': 'campo@rede-raizes-socialista.local',
                 'birth_date': '1995-08-21',
                 'role': User.Role.COLLECTIVE,
                 'bio': 'Mutiroes, agroecologia e comunicacao de base.',
@@ -45,18 +46,19 @@ class Command(BaseCommand):
                 'username': 'comunica.mst',
                 'handle': 'comunica_mst',
                 'display_name': 'Coletivo de Comunicacao',
-                'email': 'comunica@raizcoletiva.local',
+                'email': 'comunica@rede-raizes-socialista.local',
                 'birth_date': '1997-03-14',
                 'role': User.Role.MODERATOR,
                 'bio': 'Cobertura de jornadas, memoria e feed da comunidade.',
                 'location': 'Recife',
                 'avatar_url': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80',
+                'is_rapporteur': True,
             },
             {
                 'username': 'maria.raiz',
                 'handle': 'maria_raiz',
                 'display_name': 'Maria da Raiz',
-                'email': 'maria@raizcoletiva.local',
+                'email': 'maria@rede-raizes-socialista.local',
                 'birth_date': '2001-11-07',
                 'role': User.Role.MEMBER,
                 'bio': 'Juventude, cultura popular e circulos de estudo.',
@@ -67,13 +69,25 @@ class Command(BaseCommand):
                 'username': 'saude.unidade',
                 'handle': 'saude_unidade',
                 'display_name': 'Operadora da Unidade de Saude',
-                'email': 'saude@raizcoletiva.local',
+                'email': 'saude@rede-raizes-socialista.local',
                 'birth_date': '1992-09-30',
                 'role': User.Role.MEMBER,
                 'bio': 'Acompanha consultas, prontuarios populares e agendamentos da unidade.',
                 'location': 'Unidade de Saude Popular',
                 'avatar_url': 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=600&q=80',
                 'is_health_operator': True,
+            },
+            {
+                'username': 'almox.enff',
+                'handle': 'almox_enff',
+                'display_name': 'Operadora do Almoxarifado',
+                'email': 'almox@rede-raizes-socialista.local',
+                'birth_date': '1991-04-18',
+                'role': User.Role.MEMBER,
+                'bio': 'Controle de quadros, fotos, materiais e movimentacoes do acervo.',
+                'location': 'Almoxarifado ENFF',
+                'avatar_url': 'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=600&q=80',
+                'is_warehouse_operator': True,
             },
         ]
 
@@ -104,7 +118,7 @@ class Command(BaseCommand):
         posts_data = [
             {
                 'author': created_users['coord.juventude'],
-                'caption': 'Abrimos a Raiz Coletiva para aproximar brigadas, escolas e coletivos de juventude.',
+                'caption': 'Abrimos a Rede Raizes Socialista para aproximar brigadas, escolas e coletivos de juventude.',
                 'visibility': Post.Visibility.PUBLIC,
             },
             {
@@ -352,6 +366,71 @@ class Command(BaseCommand):
             },
         )
 
+        artwork, _ = Artwork.objects.update_or_create(
+            inventory_number='QD-001',
+            defaults={
+                'name': 'Memoria da Colheita',
+                'author': 'Maria Aparecida',
+                'storage_location': 'Reserva tecnica / Estante A',
+                'condition_notes': 'Conservar longe de umidade.',
+                'notes': 'Pintura em tela cadastrada como exemplo do acervo.',
+                'created_by': created_users['almox.enff'],
+                'is_active': True,
+            },
+        )
+        ArtworkMovement.objects.get_or_create(
+            artwork=artwork,
+            movement_type=ArtworkMovement.MovementType.CHECK_OUT,
+            movement_date=timezone.localdate(),
+            taken_by='Joana Silva',
+            defaults={
+                'phone_number': '(11) 99999-0000',
+                'class_group': 'Oficina de artes',
+                'cpp_responsible': 'CPP Maria',
+                'operator_name': created_users['almox.enff'].display_name,
+                'due_date': timezone.localdate() + timedelta(days=7),
+                'notes': 'Saiu para atividade pedagogica do acervo.',
+                'created_by': created_users['almox.enff'],
+            },
+        )
+        WarehouseActivity.objects.get_or_create(
+            artwork=artwork,
+            activity_date=timezone.localdate(),
+            activity_type=WarehouseActivity.ActivityType.EXHIBITION,
+            defaults={
+                'responsible': 'Coordenacao pedagogica',
+                'status': WarehouseActivity.Status.CONFIRMED,
+                'notes': 'Exposicao interna com turma da escola.',
+                'created_by': created_users['almox.enff'],
+            },
+        )
+        WarehouseFollowUp.objects.get_or_create(
+            artwork=artwork,
+            followup_date=timezone.localdate(),
+            responsible='Operadora do Almoxarifado',
+            defaults={
+                'reason': 'Conferencia de conservacao da obra.',
+                'action_taken': 'Registro visual e checagem do local de armazenamento.',
+                'status': WarehouseFollowUp.Status.OPEN,
+                'destination': 'Reserva tecnica',
+                'created_by': created_users['almox.enff'],
+            },
+        )
+        WarehouseStockItem.objects.update_or_create(
+            material='Papel A4',
+            batch='PM-08',
+            defaults={
+                'item_class': 'Secretaria',
+                'unit': WarehouseStockItem.Unit.BOXES,
+                'quantity': 14,
+                'minimum_quantity': 6,
+                'expiry_date': timezone.localdate() + timedelta(days=180),
+                'location': 'Armario C / Gaveta 1',
+                'notes': 'Material usado para catalogacao e fichas do acervo.',
+                'created_by': created_users['almox.enff'],
+            },
+        )
+
         self.stdout.write(self.style.SUCCESS('Bootstrap concluido com sucesso.'))
         self.stdout.write(self.style.WARNING(f'Senha demo para todos os perfis: {DEMO_PASSWORD}'))
-        self.stdout.write('Perfis: coord.juventude, brigada.campo, comunica.mst, maria.raiz, saude.unidade')
+        self.stdout.write('Perfis: coord.juventude, brigada.campo, comunica.mst, maria.raiz, saude.unidade, almox.enff')

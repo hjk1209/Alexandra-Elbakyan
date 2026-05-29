@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ directory_title }} | Raiz Coletiva{% endblock %}
+{% block title %}{{ directory_title }} | {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="directory-shell">
@@ -46,16 +46,29 @@
                 <div class="chip-row">
                     <span class="visibility-pill">{{ person.location|default:"Local nao informado" }}</span>
                     <span class="visibility-pill">{{ person.posts_total }} postagens</span>
+                    {% if directory_kind == 'communities' %}
+                        <span class="visibility-pill">{% if person.is_profile_private %}Privada{% else %}Aberta{% endif %}</span>
+                    {% endif %}
                 </div>
                 <div class="directory-actions">
                     <a class="secondary-button" href="{% url 'profile' person.handle %}">Abrir perfil</a>
-                    <form method="post" action="{% url 'follow-toggle' person.handle %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="ghost-button">
-                            {% if person.pk in following_ids %}Deixar de seguir{% else %}Seguir{% endif %}
-                        </button>
-                    </form>
+                    {% if directory_kind == 'communities' and person.pk in pending_following_ids %}
+                        <button type="button" class="ghost-button" disabled>Pedido enviado</button>
+                    {% else %}
+                        <form method="post" action="{% url 'follow-toggle' person.handle %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="ghost-button">
+                                {% if person.pk in following_ids %}
+                                    Deixar de seguir
+                                {% elif directory_kind == 'communities' and person.is_profile_private %}
+                                    Solicitar entrada
+                                {% else %}
+                                    Seguir
+                                {% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
                 </div>
             </article>
         {% empty %}

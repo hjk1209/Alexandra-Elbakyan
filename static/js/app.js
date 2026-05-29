@@ -1,8 +1,8 @@
 (function () {
-    const soundStorageKey = 'raizcoletiva.notificationSoundEnabled';
-    const popupStorageKey = 'raizcoletiva.browserPopupEnabled';
-    const storyDraftStorageKey = 'raizcoletiva.storyDraft';
-    const storyDraftSubmittedKey = 'raizcoletiva.storyDraftSubmitted';
+    const soundStorageKey = 'redeRaizesSocialista.notificationSoundEnabled';
+    const popupStorageKey = 'redeRaizesSocialista.browserPopupEnabled';
+    const storyDraftStorageKey = 'redeRaizesSocialista.storyDraft';
+    const storyDraftSubmittedKey = 'redeRaizesSocialista.storyDraftSubmitted';
     const flashNodes = Array.from(document.querySelectorAll('[data-notification-level]'));
     const soundToggle = document.querySelector('[data-sound-toggle]');
     const popupToggle = document.querySelector('[data-popup-toggle]');
@@ -252,15 +252,15 @@
 
     function popupTitleForLevel(level) {
         if (level === 'error') {
-            return 'Raiz Coletiva - erro';
+            return 'Rede Raizes Socialista - erro';
         }
         if (level === 'warning') {
-            return 'Raiz Coletiva - alerta';
+            return 'Rede Raizes Socialista - alerta';
         }
         if (level === 'success') {
-            return 'Raiz Coletiva - confirmado';
+            return 'Rede Raizes Socialista - confirmado';
         }
-        return 'Raiz Coletiva - aviso';
+        return 'Rede Raizes Socialista - aviso';
     }
 
     function showBrowserPopup(level, text) {
@@ -271,7 +271,7 @@
         try {
             const notification = new window.Notification(popupTitleForLevel(level), {
                 body: text,
-                tag: 'raizcoletiva-flash',
+                tag: 'rede-raizes-socialista-flash',
             });
             notification.onclick = function () {
                 window.focus();
@@ -338,7 +338,7 @@
             if (permission === 'granted') {
                 writePreference(popupStorageKey, true);
                 updatePopupToggle();
-                const played = showBrowserPopup('success', 'Popups do navegador ativados para a Raiz Coletiva.');
+                const played = showBrowserPopup('success', 'Popups do navegador ativados para a Rede Raizes Socialista.');
                 if (!played) {
                     showPendingBrowserPopups();
                 }

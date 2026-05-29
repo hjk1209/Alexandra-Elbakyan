@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Relatoria | {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<section class="feed-layout">
+    <aside class="sidebar-column">
+        <article class="surface-card">
+            <span class="eyebrow">Relatoria</span>
+            <h1>Atividades da base</h1>
+            <p class="support-copy">Textos, fotos e arquivos enviados para comunidades/NBs.</p>
+            <div class="stat-grid">
+                <div class="metric-card">
+                    <strong>{{ community_total }}</strong>
+                    <span>comunidades disponiveis</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Comunidades</span>
+            <h2>Destino dos relatos</h2>
+            <div class="conversation-list">
+                {% for community in available_communities|slice:":8" %}
+                    <a class="conversation-item" href="{% url 'profile' community.handle %}">
+                        <strong>{{ community.display_name }}</strong>
+                        <span>@{{ community.handle }}</span>
+                    </a>
+                {% empty %}
+                    <p>Nenhuma comunidade/NB cadastrada ainda.</p>
+                {% endfor %}
+            </div>
+        </article>
+    </aside>
+
+    <section class="feed-column">
+        <article class="surface-card">
+            <span class="eyebrow">Novo envio</span>
+            <h2>Registrar relatoria</h2>
+            <form method="post" enctype="multipart/form-data" class="stack-form">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="primary-button"{% if not community_total %} disabled{% endif %}>
+                    Enviar para comunidade/NB
+                </button>
+            </form>
+        </article>
+
+        <article class="surface-card">
+            <span class="eyebrow">Historico</span>
+            <h2>Relatorias recentes</h2>
+            <div class="table-stack">
+                {% for report in recent_reports %}
+                    <div class="report-card">
+                        <div class="directory-head">
+                            <div>
+                                <strong>{{ report.title }}</strong>
+                                <span>{{ report.activity_date|date:"d/m/Y" }} - {{ report.community.display_name }}</span>
+                            </div>
+                            <span class="status-pill status-active">Publicado</span>
+                        </div>
+                        <p>{{ report.body|linebreaksbr }}</p>
+                        {% if report.photo_view_url %}
+                            <img class="post-image" src="{{ report.photo_view_url }}" alt="Foto da atividade">
+                        {% endif %}
+                        <div class="post-meta">
+                            <span>Relatoria de {{ report.reporter.display_name }}</span>
+                            {% if report.attachment_download_url %}
+                                <a class="ghost-button" href="{{ report.attachment_download_url }}">Baixar arquivo</a>
+                            {% endif %}
+                            {% if report.post %}
+                                <a class="secondary-button" href="{% url 'profile' report.community.handle %}">Abrir comunidade</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>Nenhuma relatoria enviada ainda.</p>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+</section>
+{% endblock %}

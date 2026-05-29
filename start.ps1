@@ -111,7 +111,7 @@ function Run-Validate {
 
 function Show-Menu {
     Clear-Host
-    Write-Host "Raiz Coletiva - menu de operacao" -ForegroundColor Green
+    Write-Host "Rede Raizes Socialista - menu de operacao" -ForegroundColor Green
     Write-Host ""
     Write-Host "1. Iniciar local em http://127.0.0.1:$Port/"
     Write-Host "2. Compartilhar na rede local"

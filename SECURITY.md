@@ -4,7 +4,7 @@
 
 Se você encontrou uma vulnerabilidade de segurança, **não abra uma issue pública**. 
 
-Por favor, envie um email para `security@example.com` com:
+Por favor, envie um email para `k.hector52@gmail.com` com:
 - Descrição da vulnerabilidade
 - Passos para reproduzir
 - Impacto potencial

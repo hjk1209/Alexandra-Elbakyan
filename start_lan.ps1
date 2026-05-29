@@ -95,7 +95,7 @@ $env:RAIZ_ALLOWED_HOSTS = $allowedHostsValue
 $env:RAIZ_CSRF_TRUSTED_ORIGINS = $trustedOriginsValue
 
 Write-Host ""
-Write-Host "Raiz Coletiva na rede local" -ForegroundColor Green
+Write-Host "Rede Raizes Socialista na rede local" -ForegroundColor Green
 Write-Host "Hostname: $hostName"
 Write-Host "IP principal: $primaryIp"
 Write-Host "URL local: http://127.0.0.1:$Port/"

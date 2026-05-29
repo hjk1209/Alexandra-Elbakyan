@@ -1,72 +1,14 @@
-# Raiz Coletiva
+# Rede Raizes Socialista
 
-Rede social da juventude do MST com feed visual, perfis, mensagens diretas, modulo de saude e base de seguranca reforcada.
+Sistema Django para rede social comunitaria com cadastro basico, feed, comunidades, relatoria, saude, almoxarifado, mensagens e seguranca operacional.
 
-## Recursos principais
-
-- Cadastro com usuario customizado.
-- Login por nome de usuario ou identificador numerico.
-- 2FA opcional por desafio temporario.
-- Feed com publicacoes, curtidas, comentarios, stories e niveis de visibilidade.
-- Perfis com seguir, deixar de seguir, perfil privado e bloqueio entre usuarios.
-- Mensagens diretas com controles de denuncia.
-- Modulo de saude para acompanhamento interno.
-- Auditoria de login, eventos de seguranca e protecao de midias.
-- Rate limit para login, posts, comentarios, mensagens, uploads e recuperacao de senha.
-- Bootstrap com usuarios e dados demo.
-
-## Requisitos
-
-- Windows com Python 3.14 disponivel via `py -3.14`.
-- Para ambiente minimo local: `requirements.txt`.
-- Para producao ou recursos completos: `requirements-prod.txt`.
-- Docker Desktop, se for usar `docker-compose.yml`.
-
-## Instalar dependencias
-
-Ambiente local minimo:
+## Inicio Rapido
 
 ```powershell
 py -3.14 -m pip install -r requirements.txt
-```
-
-Ambiente completo de producao/desenvolvimento:
-
-```powershell
-py -3.14 -m pip install -r requirements-prod.txt
-```
-
-## Configurar ambiente
-
-Para desenvolvimento local:
-
-```powershell
-Copy-Item .env.local.example .env
-```
-
-Para Docker ou producao, use o modelo de producao e ajuste senhas, dominios e HTTPS:
-
-```powershell
-Copy-Item .env.prod.example .env
-```
-
-O Django carrega automaticamente `.env` quando o arquivo existe na raiz do projeto. As variaveis ja definidas no sistema operacional continuam tendo prioridade.
-
-## Como iniciar localmente
-
-Use o menu operacional:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start.ps1
-```
-
-Ou rode manualmente:
-
-```powershell
-$env:RAIZ_DEBUG="True"
-py -3.14 manage.py migrate
-py -3.14 manage.py bootstrap_juventude_mst
-py -3.14 manage.py runserver
+py -3.14 manage.py migrate --settings=juventude_mst.settings.local
+py -3.14 manage.py bootstrap_juventude_mst --settings=juventude_mst.settings.local
+py -3.14 manage.py runserver 127.0.0.1:8000 --settings=juventude_mst.settings.local
 ```
 
 Abra:
@@ -75,96 +17,104 @@ Abra:
 http://127.0.0.1:8000/
 ```
 
-## Compartilhar na rede local
-
-Para abrir o sistema em outro computador ou celular na mesma rede:
+No Windows, o menu operacional tambem faz esse fluxo:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\start_lan.ps1
+powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-Para conferir a URL sem iniciar o servidor:
+## Cadastro Basico
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start_lan.ps1 -ShowOnly
+O cadastro publico fica em:
+
+```text
+http://127.0.0.1:8000/conta/cadastro/
 ```
 
-Se outro aparelho nao conseguir acessar, confira o firewall do Windows na porta `8000`.
+Campos principais:
 
-## Perfis demo
+- nome
+- nome de perfil
+- usuario interno
+- email
+- tipo de perfil
+- senha
 
-- `coord.juventude`
-- `brigada.campo`
-- `comunica.mst`
-- `maria.raiz`
+Perfis especiais, como Relatoria, Saude e Almoxarifado, sao liberados pela gestao em `Protecao/Gestao`.
 
-Senha demo:
+## Perfis Demo
+
+Todos usam a senha:
 
 ```text
 MstJuventude!2026
 ```
 
-Para recriar a base inicial:
+- `coord.juventude` - fundador/gestao
+- `brigada.campo` - comunidade/coletivo
+- `comunica.mst` - moderacao e relatoria
+- `maria.raiz` - membro comum
+- `saude.unidade` - operador de saude
+- `almox.enff` - operador de almoxarifado
+
+## Dependencias
+
+Ambiente local minimo:
 
 ```powershell
-py -3.14 manage.py bootstrap_juventude_mst
+py -3.14 -m pip install -r requirements.txt
 ```
 
-## Testes
+Producao/Docker:
 
 ```powershell
-py -3.14 manage.py check
+py -3.14 -m pip install -r requirements-prod.txt
+```
+
+Detalhes ficam em [docs/dependencias.md](docs/dependencias.md).
+
+## Validacao
+
+```powershell
+py -3.14 manage.py check --settings=juventude_mst.settings.local
+py -3.14 manage.py makemigrations --check --dry-run --settings=juventude_mst.settings.local
 py -3.14 manage.py test --settings=juventude_mst.settings.test
 ```
 
-Os testes usam cache local e sessao em banco, entao nao precisam de Redis.
-
-Para validar dependencias, configuracao Django e testes de uma vez:
+Ou:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\validate.ps1
 ```
 
-## Backup local
+## Estrutura
 
-Para salvar uma copia do banco SQLite, arquivos enviados e logs:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\backup.ps1
+```text
+accounts/       usuarios, login, cadastro e permissoes
+core/           home, seguranca, auditoria, midia protegida e comandos
+health/         modulo de saude
+messaging/      mensagens diretas
+social/         feed, comunidades, stories e relatoria
+warehouse/      almoxarifado, acervo, movimentacoes e estoque
+juventude_mst/  configuracao Django e rotas principais
+templates/      HTML por modulo
+static/         CSS e JavaScript
+media/          arquivos enviados em ambiente local
+logs/           logs locais
+docs/           documentacao tecnica padronizada
 ```
 
-Os backups ficam em `backups/<data-hora>/`.
+Detalhes ficam em [docs/estrutura.md](docs/estrutura.md).
 
-Para restaurar um backup local:
+## Documentos Padronizados
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\restore.ps1 -BackupDir .\backups\20260518-120000
-```
+- [docs/estrutura.md](docs/estrutura.md)
+- [docs/dependencias.md](docs/dependencias.md)
+- [docs/cadastro-basico.md](docs/cadastro-basico.md)
 
-O script pede confirmacao antes de substituir dados.
-
-## Variaveis de ambiente
-
-Use `.env.example` como referencia. As principais variaveis sao:
-
-- `RAIZ_SECRET_KEY`
-- `RAIZ_DEBUG`
-- `RAIZ_ALLOWED_HOSTS`
-- `RAIZ_CSRF_TRUSTED_ORIGINS`
-- `RAIZ_SECURE_SSL_REDIRECT`
-- `RAIZ_TRUST_X_FORWARDED_FOR`
-- `RAIZ_ENABLE_REALTIME`
-- `RAIZ_DB_ENGINE`
-- `RAIZ_CACHE_BACKEND`
-- `RAIZ_CACHE_LOCATION`
-- `RAIZ_JWT_ACCESS_TOKEN_TTL_MINUTES`
-- `RAIZ_JWT_REFRESH_TOKEN_TTL_DAYS`
-- `RAIZ_BLOCKED_TERMS`
-- `RAIZ_SENSITIVE_TERMS`
+Os nomes foram mantidos em minusculo, sem espacos e em ASCII para evitar problemas no Windows, Docker e Git.
 
 ## Docker
-
-Configure `.env` a partir de `.env.example` e suba os servicos:
 
 ```powershell
 Copy-Item .env.prod.example .env
@@ -173,70 +123,36 @@ docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py bootstrap_juventude_mst
 ```
 
-O Docker usa PostgreSQL, Redis e a imagem Python 3.14.
+## Rede Local
 
-## Producao
-
-Antes de colocar em internet aberta:
-
-- Defina `RAIZ_DEBUG=False`.
-- Troque `RAIZ_SECRET_KEY`.
-- Configure `RAIZ_ALLOWED_HOSTS` com o dominio real.
-- Configure `RAIZ_CSRF_TRUSTED_ORIGINS` com HTTPS.
-- Use PostgreSQL.
-- Use Redis para cache, sessao e canais em tempo real.
-- Ative HTTPS no proxy reverso.
-- Configure backups do banco e da pasta `media`.
-- Monitore `logs/raiz.log` e `logs/security.log`.
-
-Exemplo de variaveis de producao:
-
-```text
-RAIZ_DEBUG=False
-RAIZ_SECRET_KEY=<gere-uma-chave-aleatoria-com-64-caracteres-ou-mais>
-RAIZ_ALLOWED_HOSTS=deepenff.com,www.deepenff.com
-RAIZ_CSRF_TRUSTED_ORIGINS=https://deepenff.com,https://www.deepenff.com
-RAIZ_DB_ENGINE=django.db.backends.postgresql
-RAIZ_DB_NAME=raiz_db
-RAIZ_DB_USER=postgres
-RAIZ_DB_PASSWORD=senha-forte
-RAIZ_DB_HOST=db
-RAIZ_DB_PORT=5432
-RAIZ_CACHE_BACKEND=django.core.cache.backends.redis.RedisCache
-RAIZ_CACHE_LOCATION=redis://redis:6379/0
-RAIZ_SECURE_SSL_REDIRECT=True
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start_lan.ps1
 ```
 
-## Estrutura
+## Backup Local
 
-```text
-.
-|-- accounts/              Autenticacao, usuarios, perfis e login
-|-- core/                  Seguranca, auditoria, uploads e home
-|-- health/                Modulo de saude
-|-- messaging/             Mensagens diretas
-|-- social/                Feed, posts, stories e comunidade
-|-- juventude_mst/         Configuracao Django
-|-- juventude_mst/settings Configuracoes base, local, test e prod
-|-- templates/             Templates HTML
-|-- static/                CSS e JavaScript
-|-- media/                 Arquivos enviados no ambiente local
-|-- logs/                  Logs locais
-|-- start.ps1              Menu operacional Windows
-|-- start_lan.ps1          Inicializacao na rede local
-|-- backup.ps1             Backup local de banco, media e logs
-|-- restore.ps1            Restauracao de backup local
-|-- validate.ps1           Check completo do projeto
-|-- .env.local.example     Exemplo de ambiente local
-|-- .env.prod.example      Exemplo de ambiente de producao
-|-- .dockerignore          Exclusoes para build Docker
-|-- requirements.txt       Dependencias minimas locais
-|-- requirements-prod.txt  Dependencias completas
-|-- docker-compose.yml     PostgreSQL, Redis e Django
-|-- Dockerfile             Imagem da aplicacao
+```powershell
+powershell -ExecutionPolicy Bypass -File .\backup.ps1
 ```
 
-## Proximos pontos tecnicos
+Restaurar:
 
-- Testar o build Docker completo.
-- Criar painel administrativo para logs, denuncias e saude operacional.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\restore.ps1 -BackupDir .\backups\20260518-120000
+```
+
+## Variaveis Principais
+
+O prefixo `RAIZ_` foi mantido por compatibilidade com scripts e ambientes antigos. O nome publico padrao agora e `Rede Raizes Socialista`.
+
+- `RAIZ_SITE_NAME`
+- `RAIZ_SITE_DESCRIPTION`
+- `RAIZ_SECRET_KEY`
+- `RAIZ_DEBUG`
+- `RAIZ_ALLOWED_HOSTS`
+- `RAIZ_CSRF_TRUSTED_ORIGINS`
+- `RAIZ_ENABLE_REALTIME`
+- `RAIZ_DB_ENGINE`
+- `RAIZ_CACHE_BACKEND`
+- `RAIZ_CACHE_LOCATION`
+- `RAIZ_DEFAULT_FROM_EMAIL`

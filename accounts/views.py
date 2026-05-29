@@ -16,8 +16,8 @@ from django.views.generic import DetailView, FormView, TemplateView, UpdateView
 
 from core.models import SecurityEvent
 from core.security import get_client_ip, is_login_locked_out, record_login_attempt, record_security_event, throttle_request
-from social.models import Follow, WeeklyTask
-from social.services import is_following, ordered_posts_for, with_social_totals
+from social.models import CommunityJoinRequest, Follow, WeeklyTask
+from social.services import has_pending_community_request, is_following, ordered_posts_for, with_social_totals
 
 from .forms import (
     LoginForm,
@@ -47,6 +47,10 @@ def _default_success_url(user):
         return reverse('security-center')
     if getattr(user, 'can_operate_health', False):
         return reverse('health-dashboard')
+    if getattr(user, 'can_operate_warehouse', False):
+        return reverse('warehouse-dashboard')
+    if getattr(user, 'can_report_activities', False):
+        return reverse('activity-report-dashboard')
     return reverse('feed')
 
 
@@ -419,6 +423,23 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         week_end = week_start + timedelta(days=6)
         context['own_profile'] = profile_user == self.request.user
         context['following'] = is_following(self.request.user, profile_user)
+        context['is_collective_profile'] = profile_user.role == User.Role.COLLECTIVE
+        context['membership_pending'] = has_pending_community_request(self.request.user, profile_user)
+        context['can_manage_community_requests'] = (
+            context['is_collective_profile']
+            and (
+                context['own_profile']
+                or self.request.user.can_administer
+                or self.request.user.can_found
+                or self.request.user.is_superuser
+            )
+        )
+        context['community_join_requests'] = CommunityJoinRequest.objects.none()
+        if context['can_manage_community_requests']:
+            context['community_join_requests'] = CommunityJoinRequest.objects.filter(
+                community=profile_user,
+                status=CommunityJoinRequest.Status.PENDING,
+            ).select_related('requester')[:20]
         context['is_blocked'] = self.request.user.blocks(profile_user)
         context['followers_total'] = profile_user.follower_links.count()
         context['following_total'] = profile_user.following_links.count()

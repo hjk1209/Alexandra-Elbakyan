@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Feed | Raiz Coletiva{% endblock %}
+{% block title %}Feed | {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="feed-layout">
@@ -119,6 +119,17 @@
                 {% if post.media_view_url %}
                     <img class="post-image" src="{{ post.media_view_url }}" alt="Imagem da publicacao">
                 {% endif %}
+                {% with report=post.activity_report %}
+                    {% if report %}
+                        <div class="report-card">
+                            <strong>Relatoria de atividade</strong>
+                            <span>{{ report.activity_date|date:"d/m/Y" }} - enviada por {{ report.reporter.display_name }}</span>
+                            {% if report.attachment_download_url %}
+                                <a class="ghost-button" href="{{ report.attachment_download_url }}">Baixar arquivo da relatoria</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
 
                 <div class="post-meta">
                     <span>{{ post.likes_total }} curtidas</span>

@@ -227,6 +227,13 @@ class ProfileForm(forms.ModelForm):
         self.fields['birth_date'].label = 'Data de nascimento'
         self.fields['birth_date'].widget.attrs.update({'type': 'date'})
         self.fields['phone_number'].label = 'WhatsApp ou telefone'
+        self.fields['is_profile_private'].label = 'Perfil privado'
+        self.fields['is_profile_private'].help_text = 'Quando privado, apenas conexoes aceitas veem as publicacoes do perfil.'
+        if self.instance and self.instance.role == User.Role.COLLECTIVE:
+            self.fields['is_profile_private'].label = 'Comunidade privada'
+            self.fields['is_profile_private'].help_text = (
+                'Quando privada, novas pessoas precisam enviar pedido e serem aceitas pela comunidade.'
+            )
         self.fields['background_theme'].label = 'Tema de fundo'
         self.fields['background_theme'].help_text = 'Escolha a atmosfera visual que aparece quando voce usa a plataforma.'
         self.fields['two_factor_enabled'].label = 'Ativar verificacao em duas etapas'
@@ -272,6 +279,8 @@ class ManagedUserCreateForm(UserCreationForm):
             'phone_number',
             'role',
             'is_health_operator',
+            'is_rapporteur',
+            'is_warehouse_operator',
             'bio',
             'location',
             'avatar',
@@ -286,6 +295,12 @@ class ManagedUserCreateForm(UserCreationForm):
         self.fields['is_health_operator'].label = 'Operador da unidade de saude'
         self.fields['is_health_operator'].required = False
         self.fields['is_health_operator'].help_text = 'Permite gerenciar consultas, agendamentos e registros do setor de saude.'
+        self.fields['is_rapporteur'].label = 'Perfil de relatoria'
+        self.fields['is_rapporteur'].required = False
+        self.fields['is_rapporteur'].help_text = 'Permite subir textos, fotos e arquivos de atividades para uma comunidade/NB.'
+        self.fields['is_warehouse_operator'].label = 'Perfil de almoxarifado'
+        self.fields['is_warehouse_operator'].required = False
+        self.fields['is_warehouse_operator'].help_text = 'Permite gerenciar acervo, entradas, saidas, acompanhamentos e estoque.'
 
     def clean_display_name(self):
         return clean_plain_text(self.cleaned_data['display_name'])
@@ -321,6 +336,8 @@ class ManagedUserUpdateForm(forms.ModelForm):
             'phone_number',
             'role',
             'is_health_operator',
+            'is_rapporteur',
+            'is_warehouse_operator',
             'bio',
             'location',
             'is_profile_private',
@@ -339,9 +356,21 @@ class ManagedUserUpdateForm(forms.ModelForm):
         self.fields['phone_number'].label = 'WhatsApp ou telefone'
         self.fields['role'].label = 'Tipo de perfil'
         self.fields['is_health_operator'].label = 'Operador da unidade de saude'
+        self.fields['is_rapporteur'].label = 'Perfil de relatoria'
+        self.fields['is_rapporteur'].required = False
+        self.fields['is_rapporteur'].help_text = 'Permite subir textos, fotos e arquivos de atividades para uma comunidade/NB.'
+        self.fields['is_warehouse_operator'].label = 'Perfil de almoxarifado'
+        self.fields['is_warehouse_operator'].required = False
+        self.fields['is_warehouse_operator'].help_text = 'Permite gerenciar acervo, entradas, saidas, acompanhamentos e estoque.'
         self.fields['bio'].label = 'Bio'
         self.fields['location'].label = 'Local'
         self.fields['is_profile_private'].label = 'Perfil privado'
+        self.fields['is_profile_private'].help_text = 'Quando privado, apenas conexoes aceitas veem as publicacoes do perfil.'
+        if self.instance and self.instance.role == User.Role.COLLECTIVE:
+            self.fields['is_profile_private'].label = 'Comunidade privada'
+            self.fields['is_profile_private'].help_text = (
+                'Quando privada, novas pessoas precisam enviar pedido e serem aceitas pela comunidade.'
+            )
         self.fields['background_theme'].label = 'Tema de fundo'
         self.fields['two_factor_enabled'].label = 'Ativar verificacao em duas etapas'
         self.fields['two_factor_channel'].label = 'Canal do codigo'

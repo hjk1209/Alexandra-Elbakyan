@@ -2,9 +2,9 @@ from django import forms
 
 from accounts.models import User
 from core.security import clean_plain_text
-from core.uploads import validate_safe_image_upload
+from core.uploads import validate_safe_document_upload, validate_safe_image_upload
 
-from .models import Post, Story
+from .models import ActivityReport, Post, Story
 
 
 class PostForm(forms.ModelForm):
@@ -120,3 +120,56 @@ class StoryReplyForm(forms.Form):
         if not body:
             raise forms.ValidationError('Escreva algo para responder ao story.')
         return body
+
+
+class ActivityReportForm(forms.ModelForm):
+    class Meta:
+        model = ActivityReport
+        fields = ('community', 'title', 'activity_date', 'body', 'photo', 'attachment')
+        widgets = {
+            'activity_date': forms.DateInput(attrs={'type': 'date'}),
+            'body': forms.Textarea(
+                attrs={
+                    'rows': 7,
+                    'placeholder': 'Relate o que aconteceu, quem participou, encaminhamentos e proximos passos.',
+                }
+            ),
+        }
+
+    def __init__(self, *args, communities=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['community'].queryset = communities if communities is not None else User.objects.filter(
+            is_active=True,
+            role=User.Role.COLLECTIVE,
+        ).order_by('display_name', 'username')
+        self.fields['community'].label = 'Comunidade / NB'
+        self.fields['community'].help_text = 'Escolha a comunidade que recebera a relatoria.'
+        self.fields['title'].label = 'Titulo da atividade'
+        self.fields['title'].widget.attrs.update({'placeholder': 'Ex.: Oficina de comunicacao da NB'})
+        self.fields['activity_date'].label = 'Data da atividade'
+        self.fields['body'].label = 'Texto da relatoria'
+        self.fields['photo'].label = 'Foto da atividade'
+        self.fields['photo'].required = False
+        self.fields['photo'].help_text = 'Opcional. Envie JPG, PNG ou WEBP de ate 6 MB.'
+        self.fields['attachment'].label = 'Arquivo de apoio'
+        self.fields['attachment'].required = False
+        self.fields['attachment'].help_text = 'Opcional. Aceita PDF, DOC, planilha, ODT, ODS, TXT ou CSV ate 12 MB.'
+
+    def clean_title(self):
+        return clean_plain_text(self.cleaned_data['title'])
+
+    def clean_body(self):
+        body = clean_plain_text(self.cleaned_data.get('body', ''))
+        if not body:
+            raise forms.ValidationError('Escreva o texto da relatoria.')
+        return body
+
+    def clean_photo(self):
+        return validate_safe_image_upload(self.cleaned_data.get('photo'), max_size_mb=6, field_label='Foto da atividade')
+
+    def clean_attachment(self):
+        return validate_safe_document_upload(
+            self.cleaned_data.get('attachment'),
+            max_size_mb=12,
+            field_label='Arquivo de apoio',
+        )

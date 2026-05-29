@@ -11,8 +11,9 @@ from django.views.generic import TemplateView
 from accounts.forms import AdminActionReasonForm, ManagedUserCreateForm, ManagedUserUpdateForm
 from accounts.models import PasswordRequest, User
 from messaging.models import Conversation, Message, MessageReport
-from social.models import Post, Story
+from social.models import ActivityReport, Post, Story
 from social.services import visible_posts_for, visible_stories_for
+from warehouse.models import Artwork
 
 from .models import LoginAttempt, SecurityEvent
 from .security import record_security_event, resolve_protected_media_token
@@ -88,6 +89,28 @@ class ProtectedMediaView(LoginRequiredMixin, View):
             file_field = story.media
             file_label = f'story:{story.pk}'
             allow_download = story.allow_download
+        elif kind in {'activity-report-photo', 'activity-report-file'}:
+            report = get_object_or_404(
+                ActivityReport.objects.select_related('reporter', 'community'),
+                pk=object_id,
+            )
+            if not report.is_visible_to(request.user):
+                raise Http404('Arquivo indisponivel.')
+            if kind == 'activity-report-photo':
+                file_field = report.photo
+                file_label = f'activity-report-photo:{report.pk}'
+                allow_download = False
+            else:
+                file_field = report.attachment
+                file_label = f'activity-report-file:{report.pk}'
+                allow_download = True
+        elif kind == 'warehouse-artwork-photo':
+            if not getattr(request.user, 'can_operate_warehouse', False):
+                raise Http404('Arquivo indisponivel.')
+            artwork = get_object_or_404(Artwork, pk=object_id, is_active=True)
+            file_field = artwork.photo
+            file_label = f'warehouse-artwork-photo:{artwork.pk}'
+            allow_download = False
         else:
             raise Http404('Arquivo indisponivel.')
 
@@ -169,6 +192,8 @@ class SecurityCenterView(LoginRequiredMixin, TemplateView):
             'Login por nome de usuario, trilha de auditoria e bloqueio temporario por abuso.',
             'Privacidade reforcada para perfis, arquivos, posts, stories e mensagens.',
             'Setor de saude com prontuarios separados por usuario e operador autorizado por unidade.',
+            'Relatoria de atividades com envio controlado para comunidades e NBs.',
+            'Almoxarifado com acervo, movimentacoes, acompanhamentos e estoque separados do feed publico.',
             'Headers defensivos, sessao sem cache autenticado, cookies restritos e refresh token protegido.',
             'Limites por minuto para login, publicacoes, comentarios, mensagens, upload, curtidas e recuperacao.',
         ]

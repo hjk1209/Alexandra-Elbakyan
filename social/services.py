@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.models import User
 
-from .models import Follow, Post, Story
+from .models import CommunityJoinRequest, Follow, Post, Story
 
 
 def with_social_totals(queryset):
@@ -49,7 +49,7 @@ def visible_posts_for(user, author=None):
     if getattr(user, 'can_view_all_content', False):
         if author is not None:
             queryset = queryset.filter(author=author)
-        return queryset.select_related('author').annotate(
+        return queryset.select_related('author', 'activity_report').annotate(
             likes_total=Count('likes', distinct=True),
             comments_total=Count('comments', distinct=True),
         )
@@ -60,18 +60,26 @@ def visible_posts_for(user, author=None):
     if getattr(user, 'age', None) is None or user.age < 18:
         queryset = queryset.exclude(age_rating=Post.AgeRating.AGE_18)
 
+    member_visible = Q(
+        visibility__in=[Post.Visibility.PUBLIC, Post.Visibility.COMMUNITY, Post.Visibility.FOLLOWERS],
+        author__in=followed_users,
+    )
+    public_visible = Q(author__is_profile_private=False, visibility=Post.Visibility.PUBLIC)
+    open_community_visible = (
+        Q(author__is_profile_private=False, visibility=Post.Visibility.COMMUNITY)
+        & ~Q(author__role=User.Role.COLLECTIVE)
+    )
     queryset = queryset.filter(
         Q(author=user)
+        | Q(activity_report__reporter=user)
         | Q(visibility=Post.Visibility.PRIVATE, author=user)
-        | Q(visibility=Post.Visibility.FOLLOWERS, author__in=followed_users)
-        | (
-            Q(author__is_profile_private=False)
-            & Q(visibility__in=[Post.Visibility.PUBLIC, Post.Visibility.COMMUNITY])
-        )
+        | member_visible
+        | public_visible
+        | open_community_visible
     )
     if author is not None:
         queryset = queryset.filter(author=author)
-    return queryset.select_related('author').annotate(
+    return queryset.select_related('author', 'activity_report').annotate(
         likes_total=Count('likes', distinct=True),
         comments_total=Count('comments', distinct=True),
     )
@@ -127,15 +135,22 @@ def visible_stories_for(user):
     if getattr(user, 'age', None) is None or user.age < 18:
         queryset = queryset.exclude(age_rating=Story.AgeRating.AGE_18)
 
+    member_visible = Q(
+        visibility__in=[Story.Visibility.PUBLIC, Story.Visibility.COMMUNITY, Story.Visibility.FOLLOWERS],
+        author__in=Follow.objects.filter(follower=user).values('following_id'),
+    )
+    public_visible = Q(author__is_profile_private=False, visibility=Story.Visibility.PUBLIC)
+    open_community_visible = (
+        Q(author__is_profile_private=False, visibility=Story.Visibility.COMMUNITY)
+        & ~Q(author__role=User.Role.COLLECTIVE)
+    )
     return queryset.filter(
         Q(author=user)
         | Q(visibility=Story.Visibility.PRIVATE, author=user)
         | Q(visibility=Story.Visibility.CUSTOM, allowed_viewers=user)
-        | Q(visibility=Story.Visibility.FOLLOWERS, author__follower_links__follower=user)
-        | (
-            Q(author__is_profile_private=False)
-            & Q(visibility__in=[Story.Visibility.PUBLIC, Story.Visibility.COMMUNITY])
-        )
+        | member_visible
+        | public_visible
+        | open_community_visible
     ).distinct().order_by('-created_at')
 
 
@@ -143,3 +158,13 @@ def is_following(user, target):
     if not user.is_authenticated or user.pk == target.pk or user.blocks(target) or target.blocks(user):
         return False
     return Follow.objects.filter(follower=user, following=target).exists()
+
+
+def has_pending_community_request(user, community):
+    if not user.is_authenticated or user.pk == community.pk:
+        return False
+    return CommunityJoinRequest.objects.filter(
+        requester=user,
+        community=community,
+        status=CommunityJoinRequest.Status.PENDING,
+    ).exists()

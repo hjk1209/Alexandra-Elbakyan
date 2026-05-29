@@ -17,6 +17,7 @@ urlpatterns = [
     path('feed/', include('social.urls')),
     path('mensagens/', include('messaging.urls')),
     path('saude/', include('health.urls')),
+    path('almoxarifado/', include('warehouse.urls')),
     path(
         'arquivos/<slug:kind>/<int:object_id>/<slug:action>/<str:token>/',
         ProtectedMediaView.as_view(),

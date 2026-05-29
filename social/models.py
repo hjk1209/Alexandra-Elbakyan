@@ -206,6 +206,8 @@ class Story(models.Model):
             return False
         if self.visibility == self.Visibility.CUSTOM:
             return self.allowed_viewers.filter(pk=user.pk).exists()
+        if self.visibility == self.Visibility.COMMUNITY and self.author.role == 'collective':
+            return self.author.follower_links.filter(follower=user).exists()
         if self.visibility == self.Visibility.FOLLOWERS:
             return self.author.follower_links.filter(follower=user).exists()
         if self.author.is_profile_private:
@@ -305,6 +307,133 @@ class Follow(models.Model):
 
     def __str__(self):
         return f'{self.follower} segue {self.following}'
+
+
+class CommunityJoinRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pendente'
+        APPROVED = 'approved', 'Aprovada'
+        REJECTED = 'rejected', 'Recusada'
+
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='community_join_requests',
+    )
+    community = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='community_join_requests_received',
+        limit_choices_to={'role': 'collective'},
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='decided_community_join_requests',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['requester', 'community'],
+                condition=Q(status='pending'),
+                name='unique_pending_community_join_request',
+            ),
+            models.CheckConstraint(condition=~Q(requester=F('community')), name='community_join_cannot_target_self'),
+        ]
+
+    def approve(self, actor=None):
+        Follow.objects.get_or_create(follower=self.requester, following=self.community)
+        self.status = self.Status.APPROVED
+        self.decided_by = actor
+        self.decided_at = timezone.now()
+        self.save(update_fields=['status', 'decided_by', 'decided_at'])
+
+    def reject(self, actor=None):
+        self.status = self.Status.REJECTED
+        self.decided_by = actor
+        self.decided_at = timezone.now()
+        self.save(update_fields=['status', 'decided_by', 'decided_at'])
+
+    def __str__(self):
+        return f'{self.requester} -> {self.community} ({self.get_status_display()})'
+
+
+class ActivityReport(models.Model):
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='activity_reports',
+    )
+    community = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_activity_reports',
+        limit_choices_to={'role': 'collective'},
+    )
+    post = models.OneToOneField(
+        Post,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='activity_report',
+    )
+    title = models.CharField(max_length=160)
+    activity_date = models.DateField(default=timezone.localdate)
+    body = models.TextField(max_length=5000)
+    photo = models.FileField(
+        upload_to='relatoria/fotos/%Y/%m/',
+        blank=True,
+        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp'])],
+    )
+    attachment = models.FileField(
+        upload_to='relatoria/arquivos/%Y/%m/',
+        blank=True,
+        validators=[FileExtensionValidator(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'odt', 'ods', 'txt', 'csv'])],
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-activity_date', '-created_at']
+
+    def clean(self):
+        if getattr(self.community, 'role', None) != 'collective':
+            raise ValidationError('A relatoria precisa ser enviada para uma comunidade/NB.')
+        if not self.body.strip():
+            raise ValidationError('Escreva o texto da atividade antes de salvar a relatoria.')
+
+    def is_visible_to(self, user):
+        if not getattr(user, 'is_authenticated', False):
+            return False
+        if getattr(user, 'can_view_all_content', False):
+            return True
+        if user.pk in {self.reporter_id, self.community_id}:
+            return True
+        if self.community.blocks(user) or user.blocks(self.community):
+            return False
+        return Follow.objects.filter(follower=user, following=self.community).exists()
+
+    @property
+    def photo_view_url(self):
+        if not self.photo:
+            return ''
+        return build_protected_media_url('activity-report-photo', self.pk, action='view')
+
+    @property
+    def attachment_download_url(self):
+        if not self.attachment:
+            return ''
+        return build_protected_media_url('activity-report-file', self.pk, action='download')
+
+    def __str__(self):
+        return f'{self.title} - {self.community} ({self.activity_date:%d/%m/%Y})'
 
 
 class CommunityNotice(models.Model):

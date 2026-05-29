@@ -38,6 +38,11 @@ HAS_DAPHNE = find_spec('daphne') is not None
 HAS_CHANNELS = find_spec('channels') is not None
 HAS_WHITENOISE = find_spec('whitenoise') is not None
 
+SITE_NAME = os.environ.get('RAIZ_SITE_NAME', 'Rede Raizes Socialista')
+SITE_DESCRIPTION = os.environ.get(
+    'RAIZ_SITE_DESCRIPTION',
+    'Sistema social com feed, comunidades, relatoria, saude, almoxarifado e seguranca operacional.',
+)
 SECRET_KEY = os.environ.get("RAIZ_SECRET_KEY", "dev-only-change-me-before-production")
 DEBUG = env_bool("RAIZ_DEBUG", False)
 IS_TEST = 'test' in sys.argv
@@ -66,6 +71,7 @@ INSTALLED_APPS = [
     'social',
     'messaging',
     'health',
+    'warehouse',
 ]
 
 if RAIZ_ENABLE_REALTIME:
@@ -98,6 +104,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.site_identity',
             ],
         },
     },
@@ -169,7 +176,7 @@ STORAGES = {
     'staticfiles': {
         'BACKEND': (
             'whitenoise.storage.CompressedManifestStaticFilesStorage'
-            if HAS_WHITENOISE
+            if HAS_WHITENOISE and not USE_LOCAL_STATE
             else 'django.contrib.staticfiles.storage.StaticFilesStorage'
         ),
     },
@@ -188,7 +195,7 @@ EMAIL_PORT = int(os.environ.get('RAIZ_EMAIL_PORT', '587'))
 EMAIL_USE_TLS = env_bool('RAIZ_EMAIL_USE_TLS', not USE_LOCAL_STATE)
 EMAIL_HOST_USER = os.environ.get('RAIZ_EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('RAIZ_EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('RAIZ_DEFAULT_FROM_EMAIL', 'no-reply@raizcoletiva.local')
+DEFAULT_FROM_EMAIL = os.environ.get('RAIZ_DEFAULT_FROM_EMAIL', 'no-reply@rede-raizes-socialista.local')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 (BASE_DIR / 'logs').mkdir(exist_ok=True)
@@ -264,21 +271,6 @@ if RAIZ_ENABLE_REALTIME:
         }
     }
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': os.environ.get('RAIZ_ELASTICSEARCH_HOSTS', 'localhost:9200'),
-        'http_auth': (
-            os.environ.get('RAIZ_ELASTICSEARCH_USER', ''),
-            os.environ.get('RAIZ_ELASTICSEARCH_PASSWORD', '')
-        ) if not USE_LOCAL_STATE else None,
-        'verify_certs': env_bool('RAIZ_ELASTICSEARCH_VERIFY_CERTS', False),
-    },
-}
-
-GRAFANA_URL = os.environ.get('RAIZ_GRAFANA_URL', 'http://localhost:3000')
-GRAFANA_API_KEY = os.environ.get('RAIZ_GRAFANA_API_KEY', '')
-PROMETHEUS_EXPORT_MIGRATIONS = True
-
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 4 * 1024 * 1024
 
@@ -346,8 +338,8 @@ TWO_FACTOR_CODE_TTL_MINUTES = int(os.environ.get('RAIZ_TWO_FACTOR_CODE_TTL_MINUT
 JWT_ACCESS_TOKEN_TTL_MINUTES = int(os.environ.get('RAIZ_JWT_ACCESS_TOKEN_TTL_MINUTES', '10'))
 JWT_REFRESH_TOKEN_TTL_DAYS = int(os.environ.get('RAIZ_JWT_REFRESH_TOKEN_TTL_DAYS', '7'))
 JWT_REFRESH_COOKIE_NAME = os.environ.get('RAIZ_JWT_REFRESH_COOKIE_NAME', 'raiz_refresh_token')
-JWT_ISSUER = os.environ.get('RAIZ_JWT_ISSUER', 'raiz-coletiva')
-JWT_AUDIENCE = os.environ.get('RAIZ_JWT_AUDIENCE', 'raiz-coletiva-api')
+JWT_ISSUER = os.environ.get('RAIZ_JWT_ISSUER', 'rede-raizes-socialista')
+JWT_AUDIENCE = os.environ.get('RAIZ_JWT_AUDIENCE', 'rede-raizes-socialista-api')
 PROTECTED_MEDIA_TOKEN_TTL_SECONDS = int(os.environ.get('RAIZ_PROTECTED_MEDIA_TOKEN_TTL_SECONDS', '900'))
 RAIZ_BLOCKED_TERMS = env_list('RAIZ_BLOCKED_TERMS')
 RAIZ_SENSITIVE_TERMS = env_list('RAIZ_SENSITIVE_TERMS')

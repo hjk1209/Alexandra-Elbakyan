@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Criar conta | Raiz Coletiva{% endblock %}
+{% block title %}Criar conta | {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
 <section class="auth-shell">
     <article class="surface-card auth-card wide-card">
         <span class="eyebrow">Cadastro de base</span>
-        <h1>Entrar para a Raiz Coletiva</h1>
+        <h1>Entrar para a {{ SITE_NAME }}</h1>
         <p>Crie um perfil individual ou coletivo. Perfis de moderacao, administracao e fundacao sao liberados apenas pela equipe responsavel.</p>
         <p class="support-copy required-note">Campos obrigatorios: nome, nome de perfil, usuario de acesso, email e senha.</p>
         <form method="post" enctype="multipart/form-data" class="stack-form">

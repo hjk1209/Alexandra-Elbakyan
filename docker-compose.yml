@@ -4,9 +4,9 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
-    container_name: raiz-db
+    container_name: rede-raizes-db
     environment:
-      POSTGRES_DB: ${RAIZ_DB_NAME:-raiz_db}
+      POSTGRES_DB: ${RAIZ_DB_NAME:-rede_raizes_db}
       POSTGRES_USER: ${RAIZ_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${RAIZ_DB_PASSWORD:-postgres}
     volumes:
@@ -22,7 +22,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: raiz-redis
+    container_name: rede-raizes-redis
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -37,16 +37,18 @@ services:
   # Django Application
   web:
     build: .
-    container_name: raiz-web
+    container_name: rede-raizes-web
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              gunicorn -c gunicorn_config.py juventude_mst.wsgi:application"
     environment:
       RAIZ_DEBUG: "False"
+      RAIZ_SITE_NAME: ${RAIZ_SITE_NAME:-Rede Raizes Socialista}
+      RAIZ_SITE_DESCRIPTION: ${RAIZ_SITE_DESCRIPTION:-Sistema social com feed, comunidades, relatoria, saude, almoxarifado e seguranca operacional.}
       DJANGO_SETTINGS_MODULE: juventude_mst.settings.prod
       RAIZ_DB_ENGINE: django.db.backends.postgresql
-      RAIZ_DB_NAME: ${RAIZ_DB_NAME:-raiz_db}
+      RAIZ_DB_NAME: ${RAIZ_DB_NAME:-rede_raizes_db}
       RAIZ_DB_USER: ${RAIZ_DB_USER:-postgres}
       RAIZ_DB_PASSWORD: ${RAIZ_DB_PASSWORD:-postgres}
       RAIZ_DB_HOST: db
@@ -59,7 +61,7 @@ services:
       RAIZ_EMAIL_USE_TLS: ${RAIZ_EMAIL_USE_TLS:-False}
       RAIZ_EMAIL_HOST_USER: ${RAIZ_EMAIL_HOST_USER:-}
       RAIZ_EMAIL_HOST_PASSWORD: ${RAIZ_EMAIL_HOST_PASSWORD:-}
-      RAIZ_DEFAULT_FROM_EMAIL: ${RAIZ_DEFAULT_FROM_EMAIL:-no-reply@raizcoletiva.local}
+      RAIZ_DEFAULT_FROM_EMAIL: ${RAIZ_DEFAULT_FROM_EMAIL:-no-reply@rede-raizes-socialista.local}
       RAIZ_SECRET_KEY: ${RAIZ_SECRET_KEY:?RAIZ_SECRET_KEY precisa ser definida antes de subir em producao}
       RAIZ_ALLOWED_HOSTS: ${RAIZ_ALLOWED_HOSTS:-localhost,127.0.0.1}
       RAIZ_CSRF_TRUSTED_ORIGINS: ${RAIZ_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
